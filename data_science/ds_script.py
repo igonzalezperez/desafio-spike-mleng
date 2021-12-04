@@ -12,9 +12,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 import numpy as np
-import locale
-locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
-
+import dateparser
 pd.options.mode.chained_assignment = None  # default='warn'
 plt.style.use('seaborn-notebook')
 
@@ -340,7 +338,8 @@ series_pib(banco_central_pib, serie1, serie2, fecha_i, fecha_f, col_fecha)
 precio_leche = pd.read_csv('data_science/data/precio_leche.csv')
 # precio = nominal, sin iva en clp/litro
 precio_leche.rename(columns={'Anio': 'ano', 'Mes': 'mes_pal'}, inplace=True)
-precio_leche['mes'] = pd.to_datetime(precio_leche['mes_pal'], format='%b')
+precio_leche['mes'] = precio_leche['mes_pal'].apply(
+    lambda x: dateparser.parse(x))
 precio_leche['mes'] = precio_leche['mes'].apply(lambda x: x.month)
 precio_leche['mes-ano'] = precio_leche.apply(
     lambda x: f'{x.mes}-{x.ano}', axis=1)
