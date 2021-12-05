@@ -3,15 +3,18 @@ DOCSTRING: TODO
 """
 # %% Imports
 import warnings
+import json
 from typing import List
 import pandas as pd
 import dateparser
 import matplotlib.pyplot as plt
 import os
-from loguru import logger
-from logger_config import logger_config
 from dotenv import load_dotenv
+from loguru import logger
+from src.logger_config import logger_config
+from src.utils.utils import convert_int, to_100
 
+# %% Config
 load_dotenv()
 logger_config(level=os.getenv('LOG_LEVEL'))
 pd.options.mode.chained_assignment = None  # default='warn'
@@ -20,66 +23,15 @@ warnings.filterwarnings(
     "ignore", message="The localize method is no longer necessary, as this time zone supports the fold attribute",)
 
 
-def convert_int(x):
-    return int(x.replace('.', ''))
-
-
-def to_100(x):  # mirando datos del bc, pib existe entre ~85-120 - igual esto es cm (?)
-    x = x.split('.')
-    if x[0].startswith('1'):  # es 100+
-        if len(x[0]) > 2:
-            return float(x[0] + '.' + x[1])
-        else:
-            x = x[0]+x[1]
-            return float(x[0:3] + '.' + x[3:])
-    else:
-        if len(x[0]) > 2:
-            return float(x[0][0:2] + '.' + x[0][-1])
-        else:
-            x = x[0] + x[1]
-            return float(x[0:2] + '.' + x[2:])
-
-
 # %% Data Ingestion
 def ingest_data():
-    # Rain data
-    rain = pd.read_csv('data_science/data/precipitaciones.csv')  # [mm]
-    central_bank = pd.read_csv('data_science/data/banco_central.csv')
-    milk_price = pd.read_csv('data_science/data/precio_leche.csv')
-    # rain['date'] = pd.to_datetime(rain['date'], format='%Y-%m-%d')
-    # rain = rain.sort_values(by='date', ascending=True).reset_index(drop=True)
-    # rain[rain.isna().any(axis=1)]  # no tiene nans
-    # rain[rain.duplicated(subset='date', keep=False)]  # ni repetidos
-
-    # rain[regions].describe()
-    # rain.dtypes
-
-    # Central bank data
-
-    # central_bank['Periodo'] = central_bank['Periodo'].apply(lambda x: x[0:10])
-    # central_bank['Periodo'] = pd.to_datetime(
-    #     central_bank['Periodo'], format='%Y-%m-%d', errors='coerce')
-    # central_bank[central_bank.duplicated(
-    #     subset='Periodo', keep=False)]  # repetido se elimina
-    # central_bank.drop_duplicates(subset='Periodo', inplace=True)
-    # central_bank = central_bank[~central_bank.Periodo.isna()]
-    # cols_pib = [x for x in list(central_bank.columns) if 'PIB' in x]
-    # cols_pib.extend(['Periodo'])
-    # central_bank_pib = central_bank[cols_pib]
-    # central_bank_pib = central_bank_pib.dropna(how='any', axis=0)
-
-    # for col in cols_pib:
-    #     if col == 'Periodo':
-    #         continue
-    #     else:
-    #         central_bank_pib[col] = central_bank_pib[col].apply(
-    #             lambda x: convert_int(x))
-
-    # central_bank_pib.sort_values(by='Periodo', ascending=True)
-
+    rain = pd.read_csv('data/precipitaciones.csv')
+    central_bank = pd.read_csv('data/banco_central.csv')
+    milk_price = pd.read_csv('data/precio_leche.csv')
     return rain, central_bank, milk_price
 
 
+# %% Data validation
 def validate_data(data, cols: List[str] = None, metadata: bool = False, duplicate_col: str = None):
     if cols:
         for col in cols:
@@ -88,47 +40,21 @@ def validate_data(data, cols: List[str] = None, metadata: bool = False, duplicat
     for col in data:
         nan_data[col] = data[col].isnull().sum()
     duplicates = data[data.duplicated(
-        subset=duplicate_col, keep=False)] if duplicate_col else None
+        subset=duplicate_col, keep=False)] if duplicate_col else data[data.duplicated(keep=False)]
     return pd.DataFrame(nan_data, index=[0]), duplicates
 
 
-def preprocessing():
-    logger.debug('Data ingestion - Rain, Central bank and milk price.')
-    rain, central_bank, milk_price = ingest_data()
-    data = {'rain': rain, 'central_bank': central_bank, 'milk_price': milk_price}
-    regions = ['Coquimbo', 'Valparaiso', 'Metropolitana_de_Santiago',
-               'Libertador_Gral__Bernardo_O_Higgins', 'Maule', 'Biobio',
-               'La_Araucania', 'Los_Rios']
-    required_cols = {'rain': regions, 'central_bank': None, 'milk_price': None}
-    duplicate_cols = {'rain': 'date',
-                      'central_bank': 'Periodo', 'milk_price': None}
-
-    for d, c in zip(data, required_cols):
-        logger.debug(f'{d} data validation.')
-        nan_data, dups = validate_data(data[c], required_cols[c])
-        nans = nan_data.sum().sum()
-        if nans != 0:
-            logger.debug(f'{nans} Nan datapoints found.')
-            # for col in data[c]:
-            #     logger.debug(f'\n{nan_data[col].name}\n{nan_data[col].values[0]}')
-        else:
-            logger.debug(f'No Nan values found.')
-        if dups:
-            logger.debug(f'{dups} duplicate rows found.')
-        else:
-            logger.debug(f'No duplicate rows found.')
-
+# %% Data cleaning and formatting
+def prepare_data(rain, central_bank, milk_price):
     rain['date'] = pd.to_datetime(rain['date'], format='%Y-%m-%d')
     rain = rain.sort_values(by='date', ascending=True).reset_index(drop=True)
     rain = rain.dropna(how='any', axis=0)
     rain = rain.drop_duplicates(subset='date')
     rain['mes'] = rain.date.apply(lambda x: x.month)
     rain['ano'] = rain.date.apply(lambda x: x.year)
-
+    breakpoint
     cols_pib = [c for c in central_bank.columns if 'PIB' in c]
     cols_imacec = [x for x in list(central_bank.columns) if 'Imacec' in x]
-    data_imc = central_bank[['Periodo',
-                            'Indice_de_ventas_comercio_real_no_durables_IVCM']]
     central_bank['Periodo'] = central_bank['Periodo'].apply(lambda x: x[0:10])
     central_bank['Periodo'] = pd.to_datetime(
         central_bank['Periodo'], format='%Y-%m-%d', errors='coerce')
@@ -167,7 +93,11 @@ def preprocessing():
     month_col = data.pop('mes')
     data.insert(0, 'mes', month_col)
     data.insert(0, 'ano', year_col)
-    # %%
+    return data
+
+
+# %% Custom data transformation (moving averages)
+def moving_avg_transform(data):
     cc_cols = [x for x in data.columns if x not in ['ano', 'mes']]
 
     # %%
@@ -185,10 +115,44 @@ def preprocessing():
 
     data_shift1 = data[cc_cols].shift(1)
     data_shift1.columns = [x + '_mes_anterior' for x in data_shift1.columns]
-
-    # %%
     data = pd.concat([data['Precio_leche'], data_shift3_mean,
                       data_shift3_std, data_shift1], axis=1)
     data = data.dropna(how='any', axis=0)
-    data[['Precio_leche', 'Precio_leche_mes_anterior']]
     return data
+
+
+def preprocess():
+    logger.debug('Data ingestion - Rain, Central bank and milk price.')
+    rain, central_bank, milk_price = ingest_data()
+    data = {'rain': rain, 'central_bank': central_bank, 'milk_price': milk_price}
+    regions = ['Coquimbo', 'Valparaiso', 'Metropolitana_de_Santiago',
+               'Libertador_Gral__Bernardo_O_Higgins', 'Maule', 'Biobio',
+               'La_Araucania', 'Los_Rios']
+    required_cols = {'rain': regions, 'central_bank': None, 'milk_price': None}
+    duplicate_cols = {'rain': 'date',
+                      'central_bank': 'Periodo', 'milk_price': None}
+
+    for d, c in zip(data, required_cols):
+        logger.debug(f'{d} data validation.')
+        nan_data, dups = validate_data(
+            data[c], required_cols[c], False, duplicate_col=duplicate_cols[d])
+        nans = nan_data.sum().sum()
+        if nans != 0:
+            logger.debug(f'{nans} Nan datapoints found.')
+        else:
+            logger.debug(f'No Nan values found.')
+        if not dups.empty:
+            logger.debug(f'{len(dups)} duplicate rows found.')
+        else:
+            logger.debug(f'No duplicate rows found.')
+    data = prepare_data(rain, central_bank, milk_price)
+    save_data_as_request(data)
+    data = moving_avg_transform(data)
+    return data
+
+
+def save_data_as_request(data):
+    for i, j in enumerate(range(0, len(data) - 3)):
+        data_dict = data.iloc[j: j + 3, :].to_dict('list')
+        with open(f'.requests/sample_request_{i}.json', 'w') as handle:
+            json.dump(data_dict, handle)
