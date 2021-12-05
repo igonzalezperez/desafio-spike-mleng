@@ -62,10 +62,6 @@ r2 = r2_score(y_test, y_predicted)
 logger.debug(f'RMSE: {rmse}')
 logger.debug(f'R2: {r2}')
 logger.debug(grid.best_params_)
-# %%
-
-# %%
-X_train.columns[grid.best_estimator_.named_steps['selector'].get_support()]
 
 # %%
 predicted = pd.DataFrame(y_test).reset_index(drop=True)
