@@ -4,7 +4,7 @@
 <body>
     <div class="login">
         <h1>Predicción del precio de la leche</h1>
-        <form method="post" action="{{ url_for('load_data')}}" enctype="multipart/form-data">
+        <form method="post" action="{{ url_for('insert_data')}}" enctype="multipart/form-data">
             <dl>
                 <p><input type="file" name="files[]" multiple="true" autocomplete="off" required></p>
             </dl>
@@ -52,7 +52,7 @@
 <body>
     <div class="login">
         <h1>Predicción del precio de la leche</h1>
-        <form method="post" action="{{ url_for('load_data')}}" enctype="multipart/form-data">
+        <form method="post" action="{{ url_for('insert_data')}}" enctype="multipart/form-data">
             <dl>
                 <p><input type="file" name="files[]" multiple="true" autocomplete="off" required></p>
             </dl>

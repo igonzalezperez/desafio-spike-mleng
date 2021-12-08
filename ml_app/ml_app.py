@@ -18,18 +18,13 @@ def home():
     return render_template('home.html')
 
 
-@app.route('/about')
-def about():
-    return render_template('about.html')
-
-
-@app.route('/load_data', methods=['POST'])
-def load_data():
+@app.route('/insert_data', methods=['POST'])
+def insert_data():
     if request.method == 'POST':
         files = request.files.getlist("files[]")
         if len(files) < 3:
             flash(
-                'Se necesitan 3 fuentes de datos', 'danger')
+                'Se necesitan 3 fuentes de datos (Precipitación - Índices económicos - Precio de la leche).', 'danger')
         elif not all([f.filename.endswith('.csv') for f in files]):
             flash("Los archivos deben ser .csv", 'danger')
         else:
@@ -42,13 +37,6 @@ def load_data():
 def predict():
     pred = 0
     return render_template('home.html', prediction_text=f'El precio de la leche es {pred}')
-
-
-@app.route('/predict_api', methods=['POST'])
-def predict_api():
-    data = request.get_json(force=True)
-    pred = model.predict(data)
-    return jsonify(pred)
 
 
 @app.route('/logs')

@@ -29,9 +29,6 @@
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarToggle">
-                    <div class="navbar-nav mr-auto">
-                        <a class="nav-item nav-link" href="{{ url_for('about') }}">Info</a>
-                    </div>
                     <!-- Navbar Right Side -->
                     <div class="navbar-nav">
                         <a class="nav-item nav-link" href="{{ url_for('logs') }}">Logs</a>
@@ -42,7 +39,7 @@
     </header>
     <main role="main" class="container">
         <div class="row">
-            <div class="col-md-8">
+            <div class="col-md-6">
                 {% with messages = get_flashed_messages(with_categories=true) %}
                 {% if messages %}
                 {% for category, message in messages %}
@@ -54,17 +51,29 @@
                 {% endwith %}
                 {% block content %}{% endblock %}
             </div>
-            <div class="col-md-4">
+            <div class="col-md-6">
                 <div class="content-section">
-                    <h3>Our Sidebar</h3>
-                    <p class='text-muted'>You can put any information here you'd like.
-                    <ul class="list-group">
-                        <li class="list-group-item list-group-item-light">Latest Posts</li>
-                        <li class="list-group-item list-group-item-light">Announcements</li>
-                        <li class="list-group-item list-group-item-light">Calendars</li>
-                        <li class="list-group-item list-group-item-light">etc</li>
+                    <h3>¿Cómo usar la API?</h3>
+                    <ul class="list-unstyled">
+                        <li><b>Carga de datos</b></li>
+                        <ul>
+                            <li>La API accede a una base de datos que se puede actualizar agregando más filas de datos.
+                            </li>
+                            <li>Se pueden insertar datos subiendo archivos .csv con las variables climatológicas,
+                                macroecónomicas y el precio de la leche mensual.</li>
+                        </ul>
+                        <li><b>Predicción</b></li>
+                        <ul>
+                            <li>Un mes - Se ingresa el mes a predecir: '2020-01'.
+                            </li>
+                            <li>Varios meses - Se ingresan los meses a predecir separados por comas:
+                                '2020-01,2020-02'.</li>
+                            <li>Batch - Se ingresa mes de inicio y final separados por un espacio: '2020-01 2020-04'
+                                (predice todos los meses intermedios, incluyendo los bordes).
+                            </li>
+                            <li> Para predecir una fecha, la base de datos requiere los datos de 3 meses previos.</li>
+                        </ul>
                     </ul>
-                    </p>
                 </div>
             </div>
         </div>
