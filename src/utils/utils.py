@@ -1,3 +1,6 @@
+import pandas as pd
+
+
 def convert_int(x):
     return int(x.replace('.', ''))
 
@@ -16,3 +19,7 @@ def to_100(x):  # mirando datos del bc, pib existe entre ~85-120 - igual esto es
         else:
             x = x[0] + x[1]
             return float(x[0:2] + '.' + x[2:])
+
+
+def datetime_to_unix(df):
+    return (df - pd.Timestamp("1970-01-01")) // pd.Timedelta('1s')
