@@ -4,70 +4,49 @@
 <body>
     <div class="login">
         <h1>Predicción del precio de la leche</h1>
-        <form method="post" action="{{ url_for('insert_data')}}" enctype="multipart/form-data">
+        <form method="POST" action="{{ url_for('insert_data')}}" enctype="multipart/form-data">
             <dl>
                 <p><input type="file" name="files[]" multiple="true" autocomplete="off" required></p>
             </dl>
             <button type="submit" class="btn btn-primary btn-large">Cargar Datos</button>
         </form>
         <hr>
-        <form method="post" action="{{ url_for('predict')}}" enctype="multipart/form-data">
-            <input type="text" class="form-control" placeholder="Fecha. e.g. '2020-01', '2019-03 2019-07'"
-                aria-label="data" aria-describedby="basic-addon1">
+        <form method="POST" action="{{ url_for('predict')}}" enctype="multipart/form-data">
+            <input type="text" name="dates" class="form-control"
+                placeholder="Fecha. e.g. '2020-01', '2020-01,2020-02', '2020-01 2020-04'" aria-label="dates"
+                aria-describedby="basic-addon1">
             <br>
             <button type="submit" class="btn btn-primary btn-large">Predecir</button>
         </form>
         <br>
         <br>
-        {{ prediction_text }}
+        {% if table_name %}
+        <b>Predicciones</b>
+        {% endif %}
+        <table>
+            <tr>
+                {% for col in column_names %}
+                <th>{{col}}</th>
+                {% endfor %}
+            </tr>
+            {% for row in row_data %}
+            <tr>
+                {% for col, row_ in zip(column_names, row) %}
+                {% if col == link_column %}
+                <td>
+                    <button type="submit" value={{ row_ }} name="person_id" form="price_form" class="price_button">
+                        {{ row_ }}
+                    </button>
+                </td>
+                {% else %}
+                <td>{{row_}}</td>
+                {% endif %}
+                {% endfor %}
+            </tr>
+            {% endfor %}
+
+        </table>
 
     </div>
 </body>
 {% endblock content %}
-<!-- <!DOCTYPE html>
-<html>
-<!--From https://codepen.io/frytyler/pen/EGdtg-->
-
-<head>
-    <meta charset="UTF-8">
-    <title>ML API</title>
-    {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-    {% for category, message in messages %}
-    <div class="alert alert-{{ category }}">
-        {{ message }}
-    </div>
-    {% endfor %}
-    {% endif %}
-    {% endwith %}
-
-    <link href='https://fonts.googleapis.com/css?family=Pacifico' rel='stylesheet' type='text/css'>
-    <link href='https://fonts.googleapis.com/css?family=Arimo' rel='stylesheet' type='text/css'>
-    <link href='https://fonts.googleapis.com/css?family=Hind:300' rel='stylesheet' type='text/css'>
-    <link href='https://fonts.googleapis.com/css?family=Open+Sans+Condensed:300' rel='stylesheet' type='text/css'>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-
-</head>
-
-<body>
-    <div class="login">
-        <h1>Predicción del precio de la leche</h1>
-        <form method="post" action="{{ url_for('insert_data')}}" enctype="multipart/form-data">
-            <dl>
-                <p><input type="file" name="files[]" multiple="true" autocomplete="off" required></p>
-            </dl>
-            <button type="submit" class="btn btn-primary btn-block btn-large">Cargar Datos</button>
-        </form>
-        <form method="post" action="{{ url_for('predict')}}" enctype="multipart/form-data">
-            <button type="submit" class="btn btn-primary btn-block btn-large">Predecir</button>
-        </form>
-        <br>
-        <br>
-        {{ prediction_text }}
-
-    </div>
-
-
-</body>
-
-</html> -->

@@ -1,16 +1,36 @@
-from flask.helpers import url_for
 from joblib import load
 import pandas as pd
-from flask import Flask, request, jsonify, render_template, flash, redirect
-from werkzeug.utils import secure_filename
+from flask import Flask, request, render_template, flash
+from dateutil.relativedelta import relativedelta as rdelta
 from params import REQUIRED_COLUMNS
 import secrets
+from src.predict import make_predictions
+from src.preprocessing import get_data, DataPreparation
 
 app = Flask(__name__)
 secret = secrets.token_urlsafe(32)
 app.secret_key = secret
 
-model = load('models/ridge_model.pkl')
+
+def parse_dates(dates: str):
+    try:
+        if ' ' in dates:
+            dates = dates.split(' ')
+            date_i = pd.to_datetime(dates[0], format='%Y-%m')
+            date_f = pd.to_datetime(dates[1], format='%Y-%m')
+            months = (date_f.year - date_i.year) * 12 + \
+                (date_f.month - date_i.month) + 1
+            dates = [date_i + rdelta(months=i) for i in range(months)]
+        elif ',' in dates:
+            dates = dates.split(',')
+            dates = [pd.to_datetime(d, format='%Y-%m') for d in dates]
+        elif not dates:
+            return None
+        else:
+            dates = [pd.to_datetime(dates, format='%Y-%m')]
+    except:
+        return None
+    return dates
 
 
 @app.route('/')
@@ -35,8 +55,20 @@ def insert_data():
 
 @app.route('/predict', methods=['POST'])
 def predict():
-    pred = 0
-    return render_template('home.html', prediction_text=f'El precio de la leche es {pred}')
+    if request.method == 'POST':
+        dates = request.form['dates']
+        dates = parse_dates(dates)
+        if not dates:
+            flash(
+                'La fecha a predecir no corresponde a ningún formato aceptado.', 'danger')
+            return render_template('home.html')
+        preds, msg = make_predictions(dates)
+        if isinstance(msg, str):
+            flash(msg, 'danger')
+            render_template('home.html')
+        preds = preds.round(2)
+        return render_template('home.html',  column_names=preds.columns.values, row_data=list(preds.values.tolist()),
+                               table_name="Prices", zip=zip)
 
 
 @app.route('/logs')

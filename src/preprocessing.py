@@ -150,7 +150,8 @@ def moving_avg_transform(data, mode='train'):
     elif mode == 'predict':
         offset = 0
         min_p = 3
-        index = pd.DatetimeIndex([data.index[-1] + rdelta(months=1)])
+        index = pd.DatetimeIndex([idx + rdelta(months=1)
+                                 for idx in data.index[2:]])
     cc_cols = [x for x in data.columns if x != 'timestamp']
 
     data_shift3_mean = data[cc_cols].rolling(
