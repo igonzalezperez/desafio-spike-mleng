@@ -31,7 +31,7 @@
                 <div class="collapse navbar-collapse" id="navbarToggle">
                     <!-- Navbar Right Side -->
                     <div class="navbar-nav">
-                        <a class="nav-item nav-link" href="{{ url_for('monitor') }}">Logs</a>
+                        <a class="nav-item nav-link" href="{{ url_for('monitor') }}">Monitor</a>
                     </div>
                 </div>
             </div>
@@ -61,6 +61,8 @@
                             </li>
                             <li>Se pueden insertar datos subiendo archivos .csv con las variables climatológicas,
                                 macroecónomicas y el precio de la leche mensual.</li>
+                            <li>Al insertar datos se chequea que estos no existen en la base de datos, si no existen se
+                                insertan, de lo contrario no se hace nada.</li>
                         </ul>
                         <li><b>Predicción</b></li>
                         <ul>

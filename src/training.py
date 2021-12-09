@@ -14,9 +14,8 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.model_selection import GridSearchCV, train_test_split
 
-from src.utils.logger_config import logger_config
-from src.preprocessing import get_data, DataPreparation
-
+from src.preprocessing import DataPreparation
+from database.database import get_db_data
 np.random.seed(0)
 
 
@@ -31,7 +30,7 @@ def grid_search() -> None:
     - Ridge - alpha = [1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01]
     Best parameters are locally stored as json.
     """
-    x, y = get_data()
+    x, y = get_db_data()
     x, y = DataPreparation().transform(x, y)
 
     logger.debug('Grid search')
@@ -74,7 +73,7 @@ def train() -> None:
     - Ridge - Model pipeline fit in train data and stored as .pkl.
     - StandardScaler - Preprocess pipeline for target data, fit on train and stored as .pkl.
     """
-    x, y = get_data()
+    x, y = get_db_data()
 
     logger.debug('Train model')
 

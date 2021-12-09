@@ -47,45 +47,6 @@ class DataPreparation(BaseEstimator, TransformerMixin):
         return x, y
 
 
-def create_db(mode: str = 'fail') -> None:
-    """
-    Create an sqlite databse using the original .csv data.
-
-    Args:
-        mode (str, optional): What to do if DB already exists, it can be set to 'replace' to recreate the DB. Defaults to 'fail'.
-    """
-    engine = db.create_engine('sqlite:///data/database.db', echo=True)
-    conn = engine.connect()
-    data = ingest_data()
-    x, y = prepare_data(data)
-    try:
-        x.to_sql(name='features', con=conn,
-                 if_exists=mode, index=False)
-        y.to_sql(name='target', con=conn,
-                 if_exists=mode, index=False)
-    except ValueError:
-        logger.debug(
-            "Tables 'features' and 'target' already exist. Set 'mode='replace'' to overwrite.")
-    conn.close()
-    engine.dispose()
-
-
-def get_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """
-    Fetch data from the database's tables (features and target).
-
-    Returns:
-        Tuple[pd.DataFrame, pd.DataFrame]: Data for features and target from de database as DataFrames.
-    """
-    engine = db.create_engine('sqlite:///data/database.db', echo=True)
-    conn = engine.connect()
-    x = pd.read_sql_table('features', conn)
-    y = pd.read_sql_table('target', conn)
-    conn.close()
-    engine.dispose()
-    return x, y
-
-
 def ingest_data() -> Dict[str, pd.DataFrame]:
     """
     Load data from local .csv files.
@@ -111,7 +72,6 @@ def prepare_data(data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     rain = data['rain']
     central_bank = data['central_bank']
     milk_price = data['milk_price']
-
     # Clean rain data - create datetime, drop duplicates and Nans.
     rain['date'] = pd.to_datetime(rain['date'], format='%Y-%m-%d')
     rain = rain.dropna(how='any', axis=0)
@@ -142,8 +102,8 @@ def prepare_data(data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
                 lambda x: convert_int(x))
         elif col in cols_imacec:
             features[col] = features[col].apply(lambda x: to_100(x))
-            assert features[col].max() > 100
-            assert features[col].min() > 30
+            # assert features[col].max() > 100
+            # assert features[col].min() > 30
     features['IVCM_num'] = features['Indice_de_ventas_comercio_real_no_durables_IVCM'].apply(
         lambda x: to_100(x))
     features.drop(
@@ -219,3 +179,5 @@ def moving_avg_transform(data: pd.DataFrame, mode: str = 'train') -> Tuple[pd.Da
     x = data[[x for x in data.columns if x != 'Precio_leche']]
     y = data['Precio_leche']
     return x, y
+
+# %%

@@ -4,11 +4,15 @@ Flask app for loading data, make batch predictions and monitoring.
 # %% Imports
 from typing import List
 import pandas as pd
+from loguru import logger
 from flask import Flask, request, render_template, flash
 from dateutil.relativedelta import relativedelta as rdelta
 import secrets
-from src.predict import make_predictions
 
+from werkzeug.utils import redirect
+from src.predict import make_predictions
+from database.database import insert_rows
+from params import REQUIRED_COLUMNS
 
 # %% Config
 app = Flask(__name__)
@@ -32,6 +36,7 @@ def parse_dates(dates: str) -> List[pd.Timestamp]:
     Returns:
         List[pd.Timestamp]: List of timestamps with the required prediction dates.
     """
+    msg = None
     try:
         if not dates:
             return None
@@ -44,10 +49,38 @@ def parse_dates(dates: str) -> List[pd.Timestamp]:
             dates = [date_i + rdelta(months=i) for i in range(months)]
         else:
             dates = [pd.to_datetime(dates, format='%Y-%m')]
-    except Exception as e:
-        breakpoint()
-        return None
-    return dates
+    except ValueError:
+        msg = 'La(s) fecha(s) a predecir no corresponde(n) a ningún formato aceptado.'
+        logger.debug("Value doesn't conform with accepted formats.")
+    return dates, msg
+
+
+def files_to_dict(files):
+    data_dict = {}
+    for f in files:
+        df = pd.read_csv(f)
+        if 'date' in df.columns:
+            if set(REQUIRED_COLUMNS['rain']).issubset(df.columns) and df[REQUIRED_COLUMNS['rain']].isna().sum().sum() == 0:
+                data_dict['rain'] = df
+            else:
+                logger.debug('Missing required columns.')
+                return None, 'Faltan datos en las columnas requeridas'
+        elif 'Periodo' in df.columns:
+            if set(REQUIRED_COLUMNS['central_bank']).issubset(df.columns) and df[REQUIRED_COLUMNS['central_bank']].isna().sum().sum() == 0:
+                data_dict['central_bank'] = df
+            else:
+                logger.debug('Missing required columns.')
+                return None, 'Faltan datos en las columnas requeridas'
+        elif ('Anio' in df.columns) and ('Mes' in df.columns):
+            if set(REQUIRED_COLUMNS['milk_price']).issubset(df.columns) and df[REQUIRED_COLUMNS['milk_price']].isna().sum().sum() == 0:
+                data_dict['milk_price'] = df
+            else:
+                logger.debug('Missing required columns')
+                return None, 'Faltan datos en las columnas requeridas'
+    if set(REQUIRED_COLUMNS.keys()) != set(data_dict.keys()):
+        logger.debug('Missing required data source.')
+        return None, 'Faltan fuentes de datos requeridas.'
+    return data_dict, None
 
 
 @app.route('/')
@@ -65,24 +98,29 @@ def insert_data():
         elif not all([f.filename.endswith('.csv') for f in files]):
             flash("Los archivos deben ser .csv", 'danger')
         else:
-            # Cargar datos a db
-            flash('Datos cargados correctamente :)', 'success')
-        return render_template('home.html')
+            dd, msg = files_to_dict(files)
+            if dd is not None:
+                msg = insert_rows(dd)
+                flash(*msg['x'])
+                flash(*msg['y'])
+            else:
+                flash(msg, 'danger')
+        return redirect('/')
 
 
 @app.route('/predict', methods=['POST'])
 def predict():
     if request.method == 'POST':
         dates = request.form['dates']
-        dates = parse_dates(dates)
-        if not dates:
-            flash(
-                'La fecha a predecir no corresponde a ningún formato aceptado.', 'danger')
-            return render_template('home.html')
+        dates, msg = parse_dates(dates)
+        if msg:
+            flash(msg, 'danger')
+            return redirect('/')
         preds, msg = make_predictions(dates)
         if isinstance(msg, str):
             flash(msg, 'danger')
-            return render_template('home.html')
+            return redirect('/')
+        flash('Predicción realizada correctamente :)', 'success')
         preds = preds.round(2)
         return render_template('home.html',  column_names=preds.columns.values, row_data=list(preds.values.tolist()),
                                table_name="Prices", zip=zip)
@@ -90,7 +128,7 @@ def predict():
 
 @app.route('/monitor')
 def monitor():
-    return render_template('home.html')
+    return redirect('/')
 
 
 # %% Main
