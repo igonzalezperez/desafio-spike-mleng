@@ -1,6 +1,7 @@
 from src.preprocessing import create_db
 from src.training import grid_search, train
-from src.predict import make_prediction
+from src.predict import make_predictions
+from ml_app.ml_app import app
 
 
 if __name__ == '__main__':
@@ -9,4 +10,6 @@ if __name__ == '__main__':
     # grid_search()
     # train()
     # make_prediction('2020-06')
+    app.run(debug=True)
+
     pass
