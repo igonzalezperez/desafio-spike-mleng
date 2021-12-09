@@ -1,41 +1,45 @@
 """
-DOCSTRING: TODO
+Ingest, clean and transform data for training/predicting
 """
 # %% Imports
-import os
-import warnings
-import json
-from typing import List
+from typing import Tuple, Dict
 
 import dateparser
-from dotenv import load_dotenv
-from loguru import logger
 import pandas as pd
-import matplotlib.pyplot as plt
-from sklearn.base import BaseEstimator, TransformerMixin
 import sqlalchemy as db
+from loguru import logger
+from sklearn.base import BaseEstimator, TransformerMixin
 from dateutil.relativedelta import relativedelta as rdelta
-from src.utils.logger_config import logger_config
-from src.utils.utils import convert_int, to_100, datetime_to_unix
 
-# %% Config
-load_dotenv()
-logger_config(level=os.getenv('LOG_LEVEL'))
-pd.options.mode.chained_assignment = None  # default='warn'
-plt.style.use('seaborn-notebook')
-warnings.filterwarnings(
-    "ignore", message="The localize method is no longer necessary, as this time zone supports the fold attribute",)
+from src.utils.utils import convert_int, to_100, datetime_to_unix
 
 
 # %% Classes and functions
 class DataPreparation(BaseEstimator, TransformerMixin):
+    """
+    Prepare input data for training/predicting. Input data comes from database, so it is clean already.
+    """
+
     def __init__(self):
         pass
 
     def fit(self, x, y=None):
         return self
 
-    def transform(self, x, y=None, mode='train'):
+    def transform(self, x: pd.DataFrame, y: pd.DataFrame = None, mode: str = 'train') -> Tuple[pd.DataFrame, pd.DataFrame]:
+        """
+        Transform data to create model input. Merge features and target, convert unix timestamp to datetime and calculate moving average features.
+
+        Args:
+            x (pd.DataFrame): Feature matrix
+            y (pd.DataFrame, optional): Target column. Defaults to None.
+            mode (str, optional): For which purpose is the transformer, either 'train' or 'predict'. Defaults to 'train'.
+
+        Returns:
+            Tuple[pd.DataFrame, pd.DataFrame]: Transformed features and target. Target is not used when predicting.
+        """
+        assert mode in ['train', 'predict'], logger.error(
+            "'mode' parameter must be either 'train' or 'predict'.")
         data = x.merge(y, how='inner', on='timestamp')
         data['timestamp'] = pd.to_datetime(data['timestamp'], unit='s')
         data.set_index(['timestamp'], inplace=True)
@@ -43,7 +47,13 @@ class DataPreparation(BaseEstimator, TransformerMixin):
         return x, y
 
 
-def create_db(mode='fail'):
+def create_db(mode: str = 'fail') -> None:
+    """
+    Create an sqlite databse using the original .csv data.
+
+    Args:
+        mode (str, optional): What to do if DB already exists, it can be set to 'replace' to recreate the DB. Defaults to 'fail'.
+    """
     engine = db.create_engine('sqlite:///data/database.db', echo=True)
     conn = engine.connect()
     data = ingest_data()
@@ -54,13 +64,19 @@ def create_db(mode='fail'):
         y.to_sql(name='target', con=conn,
                  if_exists=mode, index=False)
     except ValueError:
-        logger.info(
+        logger.debug(
             "Tables 'features' and 'target' already exist. Set 'mode='replace'' to overwrite.")
     conn.close()
     engine.dispose()
 
 
-def get_data():
+def get_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Fetch data from the database's tables (features and target).
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame]: Data for features and target from de database as DataFrames.
+    """
     engine = db.create_engine('sqlite:///data/database.db', echo=True)
     conn = engine.connect()
     x = pd.read_sql_table('features', conn)
@@ -70,35 +86,39 @@ def get_data():
     return x, y
 
 
-def ingest_data():
+def ingest_data() -> Dict[str, pd.DataFrame]:
+    """
+    Load data from local .csv files.
+
+    Returns:
+        Dict[str, pd.DataFrame]: Dictionary with one key-value pair per file storing data as DataFrame.
+    """
     rain = pd.read_csv('data/precipitaciones.csv')
     central_bank = pd.read_csv('data/banco_central.csv')
     milk_price = pd.read_csv('data/precio_leche.csv')
     return {'rain': rain, 'central_bank': central_bank, 'milk_price': milk_price}
 
 
-def validate_data(data, cols: List[str] = None, metadata: bool = False, duplicate_col: str = None):
-    if cols:
-        for col in cols:
-            assert col in data.columns, f'Input data is missing required column {col}.'
-    nan_data = {}
-    for col in data:
-        nan_data[col] = data[col].isnull().sum()
-    duplicates = data[data.duplicated(
-        subset=duplicate_col, keep=False)] if duplicate_col else data[data.duplicated(keep=False)]
-    return pd.dataFrame(nan_data, index=[0]), duplicates
+def prepare_data(data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Data preparation for input data (from .csv) to be stored in the DB. Select necessary columns, transform date columns to unix timestamps and numeric columns to float. Drop duplicates and Nans. This function receives the 
+    Args:
+        data (pd.DataFrame): Dictionary with DataFrames. Output from ingest_data().
 
-
-def prepare_data(data):
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame]: Clean features and target DataFrames with necessaary columns for training.
+    """
     rain = data['rain']
     central_bank = data['central_bank']
     milk_price = data['milk_price']
 
+    # Clean rain data - create datetime, drop duplicates and Nans.
     rain['date'] = pd.to_datetime(rain['date'], format='%Y-%m-%d')
     rain = rain.dropna(how='any', axis=0)
     rain = rain.drop_duplicates(subset='date')
     rain = rain.rename({'date': 'timestamp'}, axis=1)
 
+    # Clean central bank data - select needed columns, drop duplicates and nans, create datetime.
     cols_pib = [c for c in central_bank.columns if 'PIB' in c]
     cols_imacec = [x for x in list(central_bank.columns) if 'Imacec' in x]
     central_bank['Periodo'] = central_bank['Periodo'].apply(lambda x: x[0:10])
@@ -110,14 +130,12 @@ def prepare_data(data):
         'Periodo', *cols_pib, *cols_imacec, 'Indice_de_ventas_comercio_real_no_durables_IVCM']]
     central_bank = central_bank.rename({'Periodo': 'timestamp'}, axis=1)
     central_bank = central_bank.dropna(how='any', axis=0)
+
+    # Merge (inner join by timestamp) rain and central bank data to features DataFrame - convert str values to float,
+    # convert datetime to unix timsetamp.
     features = rain.merge(central_bank, how='inner', on=['timestamp'])
     features = features.sort_values(by='timestamp')
-    milk_price['timestamp'] = milk_price.agg(
-        lambda x: f"{x['Anio']}, {x['Mes']} 1", axis=1)
-    milk_price['timestamp'] = milk_price['timestamp'].apply(
-        lambda x: dateparser.parse(x, languages=['es']))
-    target = milk_price.sort_values(by='timestamp')
-    target.drop(['Anio', 'Mes'], axis=1, inplace=True)
+
     for col in features:
         if col in cols_pib:
             features[col] = features[col].apply(
@@ -131,18 +149,43 @@ def prepare_data(data):
     features.drop(
         ['Indice_de_ventas_comercio_real_no_durables_IVCM'], axis=1, inplace=True)
     features['timestamp'] = datetime_to_unix(features['timestamp'])
-    target['timestamp'] = datetime_to_unix(target['timestamp'])
-
     time_col = features.pop('timestamp')
     features.insert(0, 'timestamp', time_col)
 
+    # Clean milk price data - Create datetime, convert to unix timestamp.
+    milk_price['timestamp'] = milk_price.agg(
+        lambda x: f"{x['Anio']}, {x['Mes']} 1", axis=1)
+    milk_price['timestamp'] = milk_price['timestamp'].apply(
+        lambda x: dateparser.parse(x, languages=['es']))
+    target = milk_price.sort_values(by='timestamp')
+    target.drop(['Anio', 'Mes'], axis=1, inplace=True)
+    target['timestamp'] = datetime_to_unix(target['timestamp'])
     time_col = target.pop('timestamp')
     target.insert(0, 'timestamp', time_col)
+
     return features.reset_index(drop=True), target.reset_index(drop=True)
 
 
-# %% Custom data transformation (moving averages)
-def moving_avg_transform(data, mode='train'):
+def moving_avg_transform(data: pd.DataFrame, mode: str = 'train') -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Calculate moving average features for training. To predict y[t + 1] it's necessary to have:
+    x[t]
+    mean(x[t, t-1, t-2])
+    std(x[t, t-1, t-2])
+
+    y[t]
+    mean(y[t, t-1, t-2])
+    std(y[t, t-1, t-2])
+
+    Args:
+        data (pd.DataFrame): Dataframe with features and target data.
+        mode (str, optional): Whether the processing is for training or predicting. Defaults to 'train'.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame]: Transformed feature data with extra columns for the moving averages.
+    """
+    assert mode in ['train', 'predict'], logger.error(
+        "'mode' parameter must be either 'train' or 'predict'.")
     if mode == 'train':
         offset = 1
         min_p = 1
@@ -176,41 +219,3 @@ def moving_avg_transform(data, mode='train'):
     x = data[[x for x in data.columns if x != 'Precio_leche']]
     y = data['Precio_leche']
     return x, y
-
-
-def preprocess():
-    logger.debug('data ingestion - Rain, Central bank and milk price.')
-    rain, central_bank, milk_price = ingest_data()
-    data = {'rain': rain, 'central_bank': central_bank,
-            'milk_price': milk_price}
-    regions = ['Coquimbo', 'Valparaiso', 'Metropolitana_de_Santiago',
-               'Libertador_Gral__Bernardo_O_Higgins', 'Maule', 'Biobio',
-               'La_Araucania', 'Los_Rios']
-    required_cols = {'rain': regions, 'central_bank': None, 'milk_price': None}
-    duplicate_cols = {'rain': 'date',
-                      'central_bank': 'Periodo', 'milk_price': None}
-
-    for d, c in zip(data, required_cols):
-        logger.debug(f'{d} data validation.')
-        nan_data, dups = validate_data(
-            data[c], required_cols[c], False, duplicate_col=duplicate_cols[d])
-        nans = nan_data.sum().sum()
-        if nans != 0:
-            logger.debug(f'{nans} Nan datapoints found.')
-        else:
-            logger.debug(f'No Nan values found.')
-        if not dups.empty:
-            logger.debug(f'{len(dups)} duplicate rows found.')
-        else:
-            logger.debug(f'No duplicate rows found.')
-    data = prepare_data(rain, central_bank, milk_price)
-    save_data_as_request(data)
-    data = moving_avg_transform(data)
-    return data
-
-
-def save_data_as_request(data):
-    for i, j in enumerate(range(0, len(data) - 3)):
-        data_dict = data.iloc[j: j + 3, :].to_dict('list')
-        with open(f'.requests/sample_request_{i}.json', 'w') as handle:
-            json.dump(data_dict, handle)

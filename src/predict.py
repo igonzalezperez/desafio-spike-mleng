@@ -1,3 +1,5 @@
+from typing import List
+
 from joblib import load
 import pandas as pd
 from dateutil.relativedelta import relativedelta as rdelta
@@ -6,12 +8,21 @@ from src.preprocessing import DataPreparation
 import sqlalchemy as db
 from loguru import logger
 
-feature_pipeline = load('models/pipelines/feature_pipeline.pkl')
-target_pipeline = load('models/pipelines/target_pipeline.pkl')
-model = load('models/ridge_model.pkl')
 
+def make_predictions(pred_dates: List[pd.Timestamp]) -> pd.DataFrame:
+    """
+    Predict the price of milk using trained preprocess and model pipelines for a given list of dates.
 
-def make_predictions(pred_dates: str):
+    Args:
+        pred_dates (pd.Timestamp): List of dates to predict.
+
+    Returns:
+        pd.DataFrame: Predictions for each required date.
+    """
+    feature_pipeline = load('models/pipelines/feature_pipeline.pkl')
+    target_pipeline = load('models/pipelines/target_pipeline.pkl')
+    model = load('models/ridge_model.pkl')
+
     pred_dates.sort()
     prev_dates = []
     for d in pred_dates:
@@ -41,14 +52,16 @@ def make_predictions(pred_dates: str):
             i for i in prev_dates if i not in y['timestamp'].values]
         logger.debug(f'Missing target data in months: {missing_rows}.')
         return (None, f'Missing target data {missing_rows}.')
+
     x, _ = DataPreparation().transform(x, y, mode='predict')
     x = feature_pipeline.transform(x)
     preds = model.predict(x)
     preds = target_pipeline.inverse_transform(preds)
+
     idx = [pd.to_datetime(prd, unit='s') for prd in pred_dates]
     idx = [f'{i.year}-{i.month:02d}' for i in idx]
+
     output = pd.DataFrame()
     output['Fecha'] = idx
     output['Precio'] = preds
-
     return output, None

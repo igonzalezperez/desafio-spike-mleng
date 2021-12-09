@@ -5,9 +5,9 @@ def convert_int(x):
     return int(x.replace('.', ''))
 
 
-def to_100(x):  # mirando datos del bc, pib existe entre ~85-120 - igual esto es cm (?)
+def to_100(x):
     x = x.split('.')
-    if x[0].startswith('1'):  # es 100+
+    if x[0].startswith('1'):
         if len(x[0]) > 2:
             return float(x[0] + '.' + x[1])
         else:
