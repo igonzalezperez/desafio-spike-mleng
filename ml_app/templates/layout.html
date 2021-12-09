@@ -31,7 +31,7 @@
                 <div class="collapse navbar-collapse" id="navbarToggle">
                     <!-- Navbar Right Side -->
                     <div class="navbar-nav">
-                        <a class="nav-item nav-link" href="{{ url_for('logs') }}">Logs</a>
+                        <a class="nav-item nav-link" href="{{ url_for('monitor') }}">Logs</a>
                     </div>
                 </div>
             </div>
@@ -64,12 +64,10 @@
                         </ul>
                         <li><b>Predicción</b></li>
                         <ul>
-                            <li>Un mes - Se ingresa el mes a predecir: '2020-01'.
+                            <li>Un mes - Se ingresa el mes a predecir: '2020-01' (sin las comillas).
                             </li>
-                            <li>Varios meses - Se ingresan los meses a predecir separados por comas:
-                                '2020-01,2020-02'.</li>
                             <li>Batch - Se ingresa mes de inicio y final separados por un espacio: '2020-01 2020-04'
-                                (predice todos los meses intermedios, incluyendo los bordes).
+                                (sin las comillas). Predice todos los meses intermedios, incluyendo los bordes.
                             </li>
                             <li> Para predecir una fecha, la base de datos requiere los datos de 3 meses previos.</li>
                         </ul>

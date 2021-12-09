@@ -12,9 +12,8 @@
         </form>
         <hr>
         <form method="POST" action="{{ url_for('predict')}}" enctype="multipart/form-data">
-            <input type="text" name="dates" class="form-control"
-                placeholder="Fecha. e.g. '2020-01', '2020-01,2020-02', '2020-01 2020-04'" aria-label="dates"
-                aria-describedby="basic-addon1">
+            <input type="text" name="dates" class="form-control" placeholder="Fecha. e.g. '2020-01', '2020-01 2020-04'"
+                aria-label="dates" aria-describedby="basic-addon1">
             <br>
             <button type="submit" class="btn btn-primary btn-large">Predecir</button>
         </form>
