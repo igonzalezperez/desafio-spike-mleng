@@ -1,8 +1,10 @@
 # Desafío ML Engineer - Spike - 2021/12
 
-Este proyecto contiente el código necesario para abordar el desafío para el puesto de Machine Learning Engineer. Para ello se desarrolló una Web App en Flask para predecir el precio de la leche en base a indicadores climatológicos, macroeconómicos y precios anteriores de la misma.
+Este proyecto contiente el código necesario para abordar el desafío para el puesto de Machine Learning Engineer en Spike. Para ello se desarrolló una Web App en Flask para predecir el precio de la leche en base a indicadores climatológicos, macroeconómicos y precios anteriores de la leche.
 
-## Correr la Web App
+# Correr la Web App localmente
+Primero que todo es necesario tener instalado [`docker`](https://docs.docker.com/get-docker/) y [`docker compose`](https://docs.docker.com/compose/install/).
+
 Para correr la API en un server va a ser necesario abrir la consola. En Windows esto se puede hacer con `Win + R` lo cual abrira una ventana en la que se debe escribir `cmd` y dar `Enter`.
 
 <p align="center">
@@ -24,11 +26,11 @@ Esto abre la consola. Luego se deben seguir los siguientes pasos:
    ```
    http://localhost:5000/
    ```
-### Base de datos
+## Base de datos
 El repositorio contiene la base de datos a utilizar, pero esta se puede recrear (sobreescribiendo la existente) con el siguiente commando.
 ```
 
 ```
-### Entrenamiento y optimización
+## Entrenamiento y optimización
 Si bien los modelos y pipelines ya existen en el repositorio, estos se pueden generar (y sobreescribiran los actuales) con los siguientes comandos:
 1. Optimizar parámetros vía grid search.
