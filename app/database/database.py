@@ -98,7 +98,7 @@ def insert_rows(data_dict: Dict[str, pd.DataFrame]) -> str:
             format='%Y-%m') for d in dates_y_new]
         logger.info('Uplodaded feature records already exist in database.')
         msg = {'x': (f'Los datos de features se insertaron exitosamente para los meses {dates_x_new}.', 'success'),
-               'y': ('Los datos de target a insertar ya existen en la base de datos.', 'danger')}
+               'y': ('Los datos de target a insertar ya existen en la base de datos.', 'info')}
     elif dates_y_new:
         y_in = y_new[y_new['timestamp'].isin(dates_y_new)]
         dates_x_new = [pd.to_datetime(d, unit='s').strftime(
@@ -106,10 +106,10 @@ def insert_rows(data_dict: Dict[str, pd.DataFrame]) -> str:
         dates_y_new = [pd.to_datetime(d, unit='s').strftime(
             format='%Y-%m') for d in dates_y_new]
         logger.info('Uplodaded target records already exist in database.')
-        msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'danger'),
+        msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'info'),
                'y': (f'Los datos de target se insertaron exitosamente para los meses {dates_y_new}.', 'success')}
     else:
         logger.info('Uplodaded records already exist in database.')
-        msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'danger'),
-               'y': ('Los datos de target a insertar ya existen en la base de datos.', 'danger')}
+        msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'info'),
+               'y': ('Los datos de target a insertar ya existen en la base de datos.', 'info')}
     return msg
