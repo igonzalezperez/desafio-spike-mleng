@@ -10,7 +10,7 @@ from dateutil.relativedelta import relativedelta as rdelta
 import secrets
 
 from werkzeug.utils import redirect
-from src.predict import make_predictions
+from data_science.predict import make_predictions
 from database.database import insert_rows
 from params import REQUIRED_COLUMNS
 
@@ -38,9 +38,7 @@ def parse_dates(dates: str) -> List[pd.Timestamp]:
     """
     msg = None
     try:
-        if not dates:
-            return None
-        elif ' ' in dates:
+        if ' ' in dates:
             dates = dates.split(' ')
             date_i = pd.to_datetime(dates[0], format='%Y-%m')
             date_f = pd.to_datetime(dates[1], format='%Y-%m')
@@ -51,7 +49,7 @@ def parse_dates(dates: str) -> List[pd.Timestamp]:
             dates = [pd.to_datetime(dates, format='%Y-%m')]
     except ValueError:
         msg = 'La(s) fecha(s) a predecir no corresponde(n) a ningún formato aceptado.'
-        logger.debug("Value doesn't conform with accepted formats.")
+        logger.error("Value doesn't conform with accepted formats.")
     return dates, msg
 
 
@@ -63,22 +61,22 @@ def files_to_dict(files):
             if set(REQUIRED_COLUMNS['rain']).issubset(df.columns) and df[REQUIRED_COLUMNS['rain']].isna().sum().sum() == 0:
                 data_dict['rain'] = df
             else:
-                logger.debug('Missing required columns.')
+                logger.error('Missing required columns.')
                 return None, 'Faltan datos en las columnas requeridas'
         elif 'Periodo' in df.columns:
             if set(REQUIRED_COLUMNS['central_bank']).issubset(df.columns) and df[REQUIRED_COLUMNS['central_bank']].isna().sum().sum() == 0:
                 data_dict['central_bank'] = df
             else:
-                logger.debug('Missing required columns.')
+                logger.error('Missing required columns.')
                 return None, 'Faltan datos en las columnas requeridas'
         elif ('Anio' in df.columns) and ('Mes' in df.columns):
             if set(REQUIRED_COLUMNS['milk_price']).issubset(df.columns) and df[REQUIRED_COLUMNS['milk_price']].isna().sum().sum() == 0:
                 data_dict['milk_price'] = df
             else:
-                logger.debug('Missing required columns')
+                logger.error('Missing required columns')
                 return None, 'Faltan datos en las columnas requeridas'
     if set(REQUIRED_COLUMNS.keys()) != set(data_dict.keys()):
-        logger.debug('Missing required data source.')
+        logger.error('Missing required data source.')
         return None, 'Faltan fuentes de datos requeridas.'
     return data_dict, None
 
@@ -112,6 +110,8 @@ def insert_data():
 def predict():
     if request.method == 'POST':
         dates = request.form['dates']
+        if not dates:
+            return redirect('/')
         dates, msg = parse_dates(dates)
         if msg:
             flash(msg, 'danger')
@@ -120,7 +120,7 @@ def predict():
         if isinstance(msg, str):
             flash(msg, 'danger')
             return redirect('/')
-        flash('Predicción realizada correctamente :)', 'success')
+        flash('Predicción exitosa :)', 'success')
         preds = preds.round(2)
         return render_template('home.html',  column_names=preds.columns.values, row_data=list(preds.values.tolist()),
                                table_name="Prices", zip=zip)
@@ -129,8 +129,3 @@ def predict():
 @app.route('/monitor')
 def monitor():
     return redirect('/')
-
-
-# %% Main
-if __name__ == '__main__':
-    app.run(debug=True)

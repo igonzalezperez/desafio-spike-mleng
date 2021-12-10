@@ -3,8 +3,8 @@ import pandas as pd
 from loguru import logger
 import sqlalchemy as db
 
-from src.preprocessing import ingest_data
-from src.preprocessing import prepare_data
+from data_science.preprocessing import ingest_data
+from data_science.preprocessing import prepare_data
 
 
 def create_db(mode: str = 'fail', x_in: pd.DataFrame = None, y_in: pd.DataFrame = None) -> None:
@@ -16,7 +16,7 @@ def create_db(mode: str = 'fail', x_in: pd.DataFrame = None, y_in: pd.DataFrame 
         x_in (pd.DataFrame, optional): Feature data to be inserted if mode is set to 'append'. Defaults to None.
         y_in (pd.DataFrame, optional): Target data to be inserted if mode is set to 'append'. Defaults to None.
     """
-    engine = db.create_engine('sqlite:///data/database.db', echo=True)
+    engine = db.create_engine('sqlite:///database/database.db', echo=False)
     conn = engine.connect()
     if mode == 'append':
         x_in.to_sql(name='features', con=conn,
@@ -32,7 +32,7 @@ def create_db(mode: str = 'fail', x_in: pd.DataFrame = None, y_in: pd.DataFrame 
         y.to_sql(name='target', con=conn,
                  if_exists=mode, index=False)
     except ValueError:
-        logger.debug(
+        logger.warning(
             "Tables 'features' and 'target' already exist. Set 'mode='replace'' to overwrite.")
     conn.close()
     engine.dispose()
@@ -46,7 +46,7 @@ def get_db_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame]: Data for features and target from de database as DataFrames.
     """
-    engine = db.create_engine('sqlite:///data/database.db', echo=True)
+    engine = db.create_engine('sqlite:///database/database.db', echo=False)
     conn = engine.connect()
     x = pd.read_sql_table('features', conn)
     y = pd.read_sql_table('target', conn)
@@ -71,8 +71,8 @@ def insert_rows(data_dict):
             format='%Y-%m') for d in dates_x_new]
         dates_y_new = [pd.to_datetime(d, unit='s').strftime(
             format='%Y-%m') for d in dates_y_new]
-        logger.debug(f'Added feature records for months {dates_x_new}.')
-        logger.debug(f'Added target records for months {dates_y_new}.')
+        logger.info(f'Added feature records for months {dates_x_new}.')
+        logger.info(f'Added target records for months {dates_y_new}.')
         msg = {'x': (f'Los datos de features se insertaron exitosamente para los meses {dates_x_new}.', 'success'),
                'y': (f'Los datos de target se insertaron exitosamente para los meses {dates_y_new}.', 'success')}
     elif dates_x_new:
@@ -81,7 +81,7 @@ def insert_rows(data_dict):
             format='%Y-%m') for d in dates_x_new]
         dates_y_new = [pd.to_datetime(d, unit='s').strftime(
             format='%Y-%m') for d in dates_y_new]
-        logger.debug('Uplodaded feature records already exist in database.')
+        logger.info('Uplodaded feature records already exist in database.')
         msg = {'x': (f'Los datos de features se insertaron exitosamente para los meses {dates_x_new}.', 'success'),
                'y': ('Los datos de target a insertar ya existen en la base de datos.', 'danger')}
     elif dates_y_new:
@@ -90,11 +90,11 @@ def insert_rows(data_dict):
             format='%Y-%m') for d in dates_x_new]
         dates_y_new = [pd.to_datetime(d, unit='s').strftime(
             format='%Y-%m') for d in dates_y_new]
-        logger.debug('Uplodaded target records already exist in database.')
+        logger.info('Uplodaded target records already exist in database.')
         msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'danger'),
                'y': (f'Los datos de target se insertaron exitosamente para los meses {dates_y_new}.', 'success')}
     else:
-        logger.debug('Uplodaded records already exist in database.')
+        logger.info('Uplodaded records already exist in database.')
         msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'danger'),
                'y': ('Los datos de target a insertar ya existen en la base de datos.', 'danger')}
     return msg

@@ -14,7 +14,7 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler, PolynomialFeatures
 from sklearn.model_selection import GridSearchCV, train_test_split
 
-from src.preprocessing import DataPreparation
+from data_science.preprocessing import DataPreparation
 from database.database import get_db_data
 np.random.seed(0)
 
@@ -33,7 +33,7 @@ def grid_search() -> None:
     x, y = get_db_data()
     x, y = DataPreparation().transform(x, y)
 
-    logger.debug('Grid search')
+    logger.info('Grid search')
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, test_size=0.2, random_state=42)
 
@@ -57,9 +57,9 @@ def grid_search() -> None:
     rmse = mean_squared_error(y_test, y_predicted)
     r2 = r2_score(y_test, y_predicted)
 
-    logger.debug(f'RMSE: {rmse}')
-    logger.debug(f'R2: {r2}')
-    logger.debug(grid.best_params_)
+    logger.info(f'RMSE: {rmse}')
+    logger.info(f'R2: {r2}')
+    logger.info(grid.best_params_)
 
     with open('models/params/best_params.json', 'w') as f:
         json.dump(grid.best_params_, f)
@@ -75,7 +75,7 @@ def train() -> None:
     """
     x, y = get_db_data()
 
-    logger.debug('Train model')
+    logger.info('Train model')
 
     x, y = DataPreparation().transform(x, y)
     x_train, x_test, y_train, y_test = train_test_split(
@@ -108,8 +108,8 @@ def train() -> None:
     rmse = mean_squared_error(y_test, y_predicted)
     r2 = r2_score(y_test, y_predicted)
 
-    logger.debug(f'RMSE: {rmse}')
-    logger.debug(f'R2: {r2}')
+    logger.info(f'RMSE: {rmse}')
+    logger.info(f'R2: {r2}')
 
     joblib.dump(preproc_pipe, './models/pipelines/feature_pipeline.pkl')
     joblib.dump(target_transform, './models/pipelines/target_pipeline.pkl')

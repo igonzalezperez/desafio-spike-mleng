@@ -3,8 +3,8 @@ from typing import List
 from joblib import load
 import pandas as pd
 from dateutil.relativedelta import relativedelta as rdelta
-from src.utils.utils import datetime_to_unix
-from src.preprocessing import DataPreparation
+from data_science.utils.utils import datetime_to_unix
+from data_science.preprocessing import DataPreparation
 import sqlalchemy as db
 from loguru import logger
 
@@ -45,12 +45,12 @@ def make_predictions(pred_dates: List[pd.Timestamp]) -> pd.DataFrame:
     if len(x) < len(pred_dates) + 2:
         missing_rows = [pd.to_datetime(i, unit='s').strftime(
             '%Y-%m') for i in prev_dates if i not in x['timestamp'].values]
-        logger.debug(f'Missing feature data {missing_rows}.')
+        logger.error(f'Missing feature data {missing_rows}.')
         return (None, f'Faltan datos (features) de algunos meses para predecir: {missing_rows}.')
     if len(x) < len(pred_dates) + 2:
         missing_rows = [
             i for i in prev_dates if i not in y['timestamp'].values]
-        logger.debug(f'Missing target data in months: {missing_rows}.')
+        logger.error(f'Missing target data in months: {missing_rows}.')
         return (None, f'Faltan datos (target) de algunos meses para predecir: {missing_rows}.')
 
     x, _ = DataPreparation().transform(x, y, mode='predict')
@@ -64,5 +64,5 @@ def make_predictions(pred_dates: List[pd.Timestamp]) -> pd.DataFrame:
     output = pd.DataFrame()
     output['Fecha'] = idx
     output['Precio'] = preds
-    logger.debug(f'Data predicted succesfully.')
+    logger.info(f'Data predicted successfully.')
     return output, None

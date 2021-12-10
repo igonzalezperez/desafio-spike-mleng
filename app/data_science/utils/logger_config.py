@@ -1,5 +1,5 @@
 """
-Define function which configures logger both to be written on file and printed in stderr (python console).
+Define function which configures logger both to be written on file and printed in stderr.
 """
 # %% Imports
 import sys
@@ -8,7 +8,7 @@ from loguru import logger
 
 
 # %% Functions and Classes
-def logger_config(filepath: str = './logs/.log', level: str = 'WARNING', **kwargs) -> None:
+def logger_config(filepath: str = 'logs/.log', level: str = 'WARNING', **kwargs) -> None:
     """
     Define loggers for file and stderr.
     :param filepath: Where to save log output.
@@ -29,7 +29,7 @@ def logger_config(filepath: str = './logs/.log', level: str = 'WARNING', **kwarg
 # %% Main
 if __name__ == '__main__':
     log_level = 'DEBUG'
-    config_logger(level=log_level)
+    logger_config(level=log_level)
     logger.debug('bug')
     logger.info('info')
     logger.warning('warning')
