@@ -61,7 +61,7 @@ def get_db_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     return x, y
 
 
-def insert_rows(data_dict: Dict[str, pd.Dataframe]) -> str:
+def insert_rows(data_dict: Dict[str, pd.DataFrame]) -> str:
     """
     Insert new rows to database if they don't existe already.
 
