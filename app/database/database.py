@@ -98,3 +98,7 @@ def insert_rows(data_dict):
         msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'danger'),
                'y': ('Los datos de target a insertar ya existen en la base de datos.', 'danger')}
     return msg
+
+
+if __name__ == '__main__':
+    create_db(mode='replace')
