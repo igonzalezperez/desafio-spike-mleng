@@ -8,6 +8,7 @@ from loguru import logger
 from flask import Flask, request, render_template, flash
 from dateutil.relativedelta import relativedelta as rdelta
 import secrets
+import socket
 
 from werkzeug.utils import redirect
 from data_science.predict import make_predictions
@@ -83,7 +84,7 @@ def files_to_dict(files):
 
 @app.route('/')
 def home():
-    return render_template('home.html')
+    return render_template('home.html', container_id={'container_id': socket.gethostname()})
 
 
 @app.route('/insert_data', methods=['POST'])

@@ -12,11 +12,13 @@
 
     <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='css/style.css') }}">
 
-    {% if title %}
-    <title>Spike ML API - {{ title }}</title>
-    {% else %}
-    <title>Spike ML API</title>
-    {% endif %}
+</head>
+
+{% if title %}
+<title>Spike ML API - {{ title }}</title>
+{% else %}
+<title>Spike ML API</title>
+{% endif %}
 </head>
 
 <body>
@@ -75,6 +77,11 @@
                             <li> Para predecir una fecha, la base de datos requiere los datos de 3 meses previos.</li>
                         </ul>
                     </ul>
+                    {% if container_id %}
+                    <div class='footer'>
+                        Container ID: {{ container_id["container_id"]}}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>
