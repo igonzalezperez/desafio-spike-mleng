@@ -12,7 +12,7 @@ import secrets
 from werkzeug.utils import redirect
 from data_science.predict import make_predictions
 from database.database import insert_rows
-from params import REQUIRED_COLUMNS
+from config import REQUIRED_COLUMNS
 
 # %% Config
 app = Flask(__name__)
@@ -109,7 +109,7 @@ def insert_data():
 @app.route('/predict', methods=['POST'])
 def predict():
     if request.method == 'POST':
-        dates = request.form['dates']
+        dates = request.form['dates'].strip().strip('\'').strip('\"')
         if not dates:
             return redirect('/')
         dates, msg = parse_dates(dates)

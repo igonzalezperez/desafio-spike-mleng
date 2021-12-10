@@ -2,16 +2,22 @@
 Ingest, clean and transform data for training/predicting
 """
 # %% Imports
+import os
+import warnings
 from typing import Tuple, Dict
 
 import dateparser
 import pandas as pd
-import sqlalchemy as db
 from loguru import logger
 from sklearn.base import BaseEstimator, TransformerMixin
 from dateutil.relativedelta import relativedelta as rdelta
 
 from data_science.utils.utils import convert_int, to_100, datetime_to_unix
+
+warnings.filterwarnings(
+    "ignore",
+    message="The localize method is no longer necessary, as this time zone supports the fold attribute",
+)
 
 
 # %% Classes and functions
@@ -54,9 +60,9 @@ def ingest_data() -> Dict[str, pd.DataFrame]:
     Returns:
         Dict[str, pd.DataFrame]: Dictionary with one key-value pair per file storing data as DataFrame.
     """
-    rain = pd.read_csv('data/precipitaciones.csv')
-    central_bank = pd.read_csv('data/banco_central.csv')
-    milk_price = pd.read_csv('data/precio_leche.csv')
+    rain = pd.read_csv(os.path.join('data', 'precipitaciones.csv'))
+    central_bank = pd.read_csv(os.path.join('data', 'banco_central.csv'))
+    milk_price = pd.read_csv(os.path.join('data', 'precio_leche.csv'))
     return {'rain': rain, 'central_bank': central_bank, 'milk_price': milk_price}
 
 

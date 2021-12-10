@@ -1,10 +1,16 @@
-from typing import Tuple
+import os
+from typing import Tuple, Dict
+
 import pandas as pd
 from loguru import logger
 import sqlalchemy as db
 
 from data_science.preprocessing import ingest_data
 from data_science.preprocessing import prepare_data
+
+DB_FILE = os.environ["DB_FILE"]
+DB_FOLDER = os.environ["DB_FOLDER"]
+DB_PATH = os.path.join(DB_FOLDER, DB_FILE)
 
 
 def create_db(mode: str = 'fail', x_in: pd.DataFrame = None, y_in: pd.DataFrame = None) -> None:
@@ -16,7 +22,7 @@ def create_db(mode: str = 'fail', x_in: pd.DataFrame = None, y_in: pd.DataFrame 
         x_in (pd.DataFrame, optional): Feature data to be inserted if mode is set to 'append'. Defaults to None.
         y_in (pd.DataFrame, optional): Target data to be inserted if mode is set to 'append'. Defaults to None.
     """
-    engine = db.create_engine('sqlite:///database/database.db', echo=False)
+    engine = db.create_engine(f'sqlite:///{DB_PATH}', echo=False)
     conn = engine.connect()
     if mode == 'append':
         x_in.to_sql(name='features', con=conn,
@@ -33,7 +39,7 @@ def create_db(mode: str = 'fail', x_in: pd.DataFrame = None, y_in: pd.DataFrame 
                  if_exists=mode, index=False)
     except ValueError:
         logger.warning(
-            "Tables 'features' and 'target' already exist. Set 'mode='replace'' to overwrite.")
+            """Tables 'features' and 'target' already exist. Set 'mode="replace"' to overwrite.""")
     conn.close()
     engine.dispose()
     return
@@ -46,7 +52,7 @@ def get_db_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame]: Data for features and target from de database as DataFrames.
     """
-    engine = db.create_engine('sqlite:///database/database.db', echo=False)
+    engine = db.create_engine(f'sqlite:///{DB_PATH}', echo=False)
     conn = engine.connect()
     x = pd.read_sql_table('features', conn)
     y = pd.read_sql_table('target', conn)
@@ -55,7 +61,16 @@ def get_db_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     return x, y
 
 
-def insert_rows(data_dict):
+def insert_rows(data_dict: Dict[str, pd.Dataframe]) -> str:
+    """
+    Insert new rows to database if they don't existe already.
+
+    Args:
+        data_dict (Dict[str, pd.Dataframe]): Dictionary with key-value pairs for each data source.
+
+    Returns:
+        str: Message describing if data was inserted or not.
+    """
     msg = {}
     x_new, y_new = prepare_data(data_dict)
     x, y = get_db_data()
@@ -98,7 +113,3 @@ def insert_rows(data_dict):
         msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'danger'),
                'y': ('Los datos de target a insertar ya existen en la base de datos.', 'danger')}
     return msg
-
-
-if __name__ == '__main__':
-    create_db(mode='replace')

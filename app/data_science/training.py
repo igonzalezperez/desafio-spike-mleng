@@ -16,10 +16,14 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 
 from data_science.preprocessing import DataPreparation
 from database.database import get_db_data
+import config as cfg
+
 np.random.seed(0)
 
 
 # %% Classes and functions
+
+
 def grid_search() -> None:
     """
     Grid search best parameters using the following Pipeline:
@@ -30,6 +34,7 @@ def grid_search() -> None:
     - Ridge - alpha = [1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01]
     Best parameters are locally stored as json.
     """
+    logger.info('Load data')
     x, y = get_db_data()
     x, y = DataPreparation().transform(x, y)
 
@@ -57,12 +62,14 @@ def grid_search() -> None:
     rmse = mean_squared_error(y_test, y_predicted)
     r2 = r2_score(y_test, y_predicted)
 
+    logger.info('Results:')
     logger.info(f'RMSE: {rmse}')
     logger.info(f'R2: {r2}')
     logger.info(grid.best_params_)
 
-    with open('models/params/best_params.json', 'w') as f:
+    with open(cfg.BEST_PARAMS_PATH, 'w') as f:
         json.dump(grid.best_params_, f)
+    logger.info(f'Saved best parameters at {cfg.BEST_PARAMS_PATH}')
 
 
 def train() -> None:
@@ -73,16 +80,18 @@ def train() -> None:
     - Ridge - Model pipeline fit in train data and stored as .pkl.
     - StandardScaler - Preprocess pipeline for target data, fit on train and stored as .pkl.
     """
+    logger.info('Load data')
     x, y = get_db_data()
 
+    with open(cfg.BEST_PARAMS_PATH, 'r') as f:
+        params = json.load(f)
+
+    logger.info(f'Model parameters - {params}')
     logger.info('Train model')
 
     x, y = DataPreparation().transform(x, y)
     x_train, x_test, y_train, y_test = train_test_split(
         x, y, test_size=0.2, random_state=42)
-
-    with open('models/params/best_params.json', 'r') as f:
-        params = json.load(f)
 
     preproc_pipe = Pipeline([('scale', StandardScaler()),
                              ('selector', SelectKBest(mutual_info_regression,
@@ -108,9 +117,15 @@ def train() -> None:
     rmse = mean_squared_error(y_test, y_predicted)
     r2 = r2_score(y_test, y_predicted)
 
+    logger.info('Results:')
     logger.info(f'RMSE: {rmse}')
     logger.info(f'R2: {r2}')
 
-    joblib.dump(preproc_pipe, './models/pipelines/feature_pipeline.pkl')
-    joblib.dump(target_transform, './models/pipelines/target_pipeline.pkl')
-    joblib.dump(model, './models/ridge_model.pkl')
+    joblib.dump(preproc_pipe, cfg.FEATURE_PIPELINE_PATH)
+    joblib.dump(target_transform, cfg.TARGET_PIPELINE_PATH)
+    joblib.dump(model, cfg.MODEL_PATH)
+    logger.info(
+        f'Saved features preprocessing pipeline at {cfg.FEATURE_PIPELINE_PATH}')
+    logger.info(
+        f'Saved target preprocessing pipeline at {cfg.TARGET_PIPELINE_PATH}')
+    logger.info(f'Saved trained model at {cfg.MODEL_PATH}')
