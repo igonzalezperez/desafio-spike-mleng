@@ -143,6 +143,7 @@ El log de predicción va guardando todas las interacciones con la app en sí. Pr
 
 Es importante mencionar que cuando se inserta data a la BBDD, automáticamente se vuelve a predecir con los nuevos datos para recalcular el RMSE y R2, y así poder identificar si el desempeño mejora o empeora en el tiempo, pudiendo detectar fenómenos como data drifting. Al igual que el caso anterior, es posible descargar los logs como archivos de texto.
 
+Finalmente, un aspecto relevante a mencionar es que en realidad la única predicción que es de valor es la de un mes futuro, mientras que la app solo puede predecir hasta 2020-05, si bien esto hace que la app no sea utilizable en forma productiva, esto obedece a una falta de datos y no al diseño o arquitectura de la solución, es decir, teniendo los datos hasta el día de hoy prefectamente podría predecirse el mes siguiente.
 
 # Planteamiento del desafío
 En esta sección detallaré cómo aborde el problema a un nivel técnico, las decisiones que tomé y el porqué de ellas.
