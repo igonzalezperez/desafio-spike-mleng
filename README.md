@@ -34,7 +34,7 @@ docker compose up -d --build
     <img src="images/docker_compose.jpg" width="600"/>
 </p>
 
-Al ejectuar el comando se comenzará a crear las imágenes y contenedor de docker, este proceso puede tomar algunos minutos ya que se deben instalar las librerías de python y luego se hace la optimización del modelo (grid search). Se debería ver el siguiente output:
+Al ejecutar el comando se comenzarán a crear las imágenes y el contenedor de docker, este proceso puede tomar algunos minutos ya que se deben instalar las librerías de python y optimizar el modelo (grid search). Se debería ver el siguiente output:
 
 <p align="center">
     <img src="images/pip_install.jpg" width="600"/>
@@ -103,9 +103,9 @@ El contenedor genera una base de datos con los archivos que se entregaron para e
 
 Para poder hacer más predicciones futuras es posible cargar nuevos datos, se espera que estos tengan la misma estructura que los originales de precipitación, banco central y precio. En particular se requiere que tengan todas las columnas necesarias para la predicción y que no contengan Nans.
 
-Se revisa que los archivos tengan el formato correcto y luego se insertan las filas si es que estas no se encuentran en la BBDD. Luego, la app informa qupe columnas fueron insertadas tanto en las features (precipitación + banco central) como targets (precio de la leche).
+Se revisa que los archivos tengan el formato correcto y luego se insertan las filas si es que estas no se encuentran en la BBDD. Luego, la app informa qué columnas fueron insertadas tanto en las features (precipitación + banco central) como targets (precio de la leche).
 
-En la carpeta `/app/data/csv/`, además de los datos originales hay otros 3 archivos con el sufijo `_dummy`, los cuales se pueden utilizar para testear la funcionalidad de carga de datos, estos datos contienen data para completar hasta el mes 2021-03, por lo que se podrá predecir hasta 2021-04 luego de insertar los datos. La data dentro de los archivos es ficticia (filas repetidas de un mes anterior) así que las predicciones no son confiables pero el punto es probar la funcionalidad.
+En la carpeta `/app/data/csv/`, además de los datos originales hay otros 3 archivos con el sufijo `_dummy`, los cuales se pueden utilizar para testear la funcionalidad de carga de datos, estos archivos contienen data para completar hasta el mes 2021-03, por lo que se podrá predecir hasta 2021-04 luego de insertar los datos. La data dentro de los archivos es ficticia (filas repetidas de un mes anterior) así que las predicciones no son confiables pero el punto es probar la funcionalidad.
 
 <p align="center">
     <img src="images/dummy.jpg" width="400"/>
@@ -115,7 +115,7 @@ En la carpeta `/app/data/csv/`, además de los datos originales hay otros 3 arch
     <img src="images/insert_data.jpg" width="400"/>
 </p>
 
-Como se ve en el ejemplo, ahora se cuenta con datos para poder predecir los meses `2020-06` a `2021-04` que antes no se podía. La última predicción muestra `nan` en el precio real ya que es un valor que no existe en la BBDD.
+Como se ve en el ejemplo, ahora se cuenta con datos para poder predecir los meses `2020-06` a `2021-04` que antes no se podían predecir. La última predicción muestra `nan` en el precio real ya que es un valor que no existe en la BBDD.
 
 <p align="center">
     <img src="images/pred_new.jpg" width="400"/>
@@ -151,6 +151,14 @@ En esta sección detallaré cómo aborde el problema a un nivel técnico, las de
 - **Backend**:
   - ``sqlite``: Para la base de datos, se utiliza porque es sencillo y rápido de usar para un proyecto pequeño. Para un proyecto que vaya a ser implementado debería migrarse a otra opción como ``PostgreSQL``, ``MySQL`` o ``MongoDB``.
   - ``python``: Se refactoriza el notebook original a archivos de `python` comunes separando preprocesamiento, entrenamiento/grid search y predicción.
+    - `pandas` para manejo de data en general.
+    - `scikit-learn` para entrenar modelos de ML y Pipelines.
+    - `SQLAlchemy` para manejar la base de datos.
+    - `dateparser` para conversión de fechas.
+    - `python-dotenv` para manejo de variables de entorno. Al usar docker estas se pueden setear directamente en el Dockerfile pero sirve para correr los archivos fuera del contenedor.
+    - `Flask` para desarrollo de API.
+    - `gunicorn` como server WSGI HTTP, para hacer el deploy de la app en un ambiente productivo (y no de desarrollo).
+    - `loguru` para mostrar logs con formato legible.
 - **API**:
   - ``Flask``: Se utiliza por su facilidad y porque ya tengo experiencia con este framework. También podrían considerarse Django o FastAPI.
 - **Frontend**:
@@ -203,7 +211,7 @@ De este modo, la data puede ser consumida por algún modelo o continuar siendo p
 ### Procesamiento
 Primero se hace un inner join entre la tabla `features` y `targets`, para que coincidan las fechas a predecir. Ya que puede ocurrir que hayan ciertas fechas que existan en una tabla pero que no estén en la otra, que es el caso, hay más filas de targets que de features.
 
-Luego, para generar el dataset que se usará para entrenar modelos, se realiza un procesamiento extra que toma en cuenta datos anteriores para predecir el siguiente, ya que el problema se plantea como una regres/forecasting.
+Luego, para generar el dataset que se usará para entrenar modelos, se realiza un procesamiento extra que toma en cuenta datos anteriores para predecir el siguiente, ya que el problema se plantea como una regresión/forecasting.
 
 En particular se calculan los promedios y desviaciones estándar de cada columna para los últimos 3 meses como medias móviles, incluyéndo el precio de la leche, por lo que si el precio de la leche en un tiempo `t` es `Y[t]` y las features son `X[t]`, la predicción se realiza mediante:
 
@@ -233,13 +241,13 @@ En la práctica se tienen dos pipelines, uno con todos los transformadores/selec
 - `model__alpha = .1`
 - `poly__degree = 1`
 - `selector__k = 7`
-- `RMSE = 12.54`
+- `RMSE = 12.54`. Este parámetro es más alto en el notebook original porque no se estaba calculando el RMSE sino el MSE.
 - `R2 = 0.83`
   
 El modelo y pipelines óptimos se guardan como archivos `.pkl` para luego ser utilizados en la API. Los procesos de limpieza y preprocesamiento (medias móviles) de secciones anteriores no necesitan guardarse ya que no tienen un método `.fit()`, solo transforman.
 
 ## API
-La API se desarrolla usando `Flask`. Dado que el problema de regresión/forecasting requiere de datos anteriores para poder predecir, el input para una sola predicción deberían ser 3 filas correspondientes a los meses inmediatamente anteriores al mes de la predicción. Sin embargo consideré que esto podía resultar engorroso, es por eso que separé la parte de carga de datos de la de predicción. Para predecir basta con escribir una fecha, mientras que la base de datos podría mantenerse periódicamente, sin que el usuario se preocupe de si el input es correcto o no.
+La API se desarrolla usando `Flask`. Dado que el problema de regresión/forecasting requiere de datos anteriores para poder predecir, el input para una sola predicción deberían ser 3 filas correspondientes a los meses inmediatamente anteriores al mes de la predicción. Sin embargo consideré que esto podía resultar engorroso para un usuario que quiere obtener predicciones, es por eso que separé la parte de carga de datos de la de predicción. Para predecir basta con escribir una fecha, mientras que la base de datos podría mantenerse periódicamente, sin que el usuario se preocupe de si el input es correcto o no.
 
 ### **/endpoints**
 - **/predict**:
@@ -264,7 +272,7 @@ La API se desarrolla usando `Flask`. Dado que el problema de regresión/forecast
   - Descarga el archivo de log `<log_name>` como archivo de texto (e.g. `/get-logs/train.log`).
 
 ## Contenedores
-La aplicación se encapsula en imágenes/contenedores usando Docker. Para que la app sea escalable se genera una imagen de la app en sí, y otra con `nginx` que funciona como web server y puede ser utilizado como load balancer para escalar la app y manejar el tráfico en ella. En la sección se cómo correr el server mostré que el contenedor se puede montar con
+La aplicación se encapsula en imágenes/contenedores usando Docker. Para que la app sea escalable se genera una imagen de la app en sí, y otra con `nginx` que funciona como web server y puede ser utilizado como load balancer para escalar la app y manejar el tráfico en ella. En la sección de cómo correr el server mostré que el contenedor se puede montar con
 
 ```
 docker compose up -d --build
@@ -276,7 +284,7 @@ para poder escalar bastaría con agregar
 docker compose up -d --build --scale app=5
 ```
 
-donde el último parámetro índica cuántas copias de la app se disponibilizarán y `nginx` luego se encarga de distribuir el tráfico. En la parte inferior derecha de la app aparece el `Container ID` (e.g. `Container ID: ec338db6d612`) que muestra cual copia del servicio es, cuando se usa más de una copia ese ID va cambiando al recargar la página, i.e., se distribuye la carga.
+donde el último parámetro índica cuántas copias de la app se disponibilizarán y `nginx` luego se encarga de distribuir el tráfico. En la parte inferior derecha de la app aparece el `Container ID` (e.g. `Container ID: ec338db6d612`) que muestra cual copia del servicio es. Cuando se usa más de una copia ese ID va cambiando al recargar la página, i.e., se distribuye la carga.
 
 La imágen de la app tiene acoplada la parte de entrenamiento y de la API, el entrenamiento se hace antes de disponibilizar el server y crea los archivos necesarios para que luego la app pueda predecir y acceder a la BBDD.
 
@@ -285,6 +293,7 @@ La imágen de la app tiene acoplada la parte de entrenamiento y de la API, el en
 - Generar más imágenes que dependan entre sí, separando `nginx`, API/Frontend y Optimización/Entrenamiento. En vez de tener solo dos imágenes (`nginx` y toda la app).
 - Generar una nueva imágen para la Base de Datos para generar persistencia de datos usando Docker `volumes`, como está ahora la data se resetea al detener el contenedor.
 - Autenticación y seguridad en general, en específico para la base de datos.
+- Documentar el proyecto usando `sphinx` o alguna librería similar.
 - Tests unitarios para las funciones/clases en `python`.
 - Explorar más los datos para definir rangos aceptables. Ya que el usuario puede ingresar datos, no sería bueno si los datos ingresados están alterados, ya que solo se chequea que las columnas existan y no sean Nan. Podría incluirse otra tabla con stats de cada columna para ver si nuevos datos son anómalos.
 - Utilizar los logs para un reentrenamiento rutinario en base al drift en los datos.
