@@ -92,9 +92,9 @@ def prepare_data(data: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     central_bank['Periodo'] = pd.to_datetime(
         central_bank['Periodo'], format='%Y-%m-%d', errors='coerce')
     central_bank = central_bank.drop_duplicates(subset='Periodo')
-    central_bank = central_bank[~central_bank['Periodo'].isna()]
     central_bank = central_bank[[
         'Periodo', *cols_pib, *cols_imacec, 'Indice_de_ventas_comercio_real_no_durables_IVCM']]
+    central_bank = central_bank[~central_bank['Periodo'].isna()]
     central_bank = central_bank.rename({'Periodo': 'timestamp'}, axis=1)
     central_bank = central_bank.dropna(how='any', axis=0)
 
