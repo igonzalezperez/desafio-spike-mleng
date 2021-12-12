@@ -24,10 +24,12 @@ def create_db(mode: str = 'fail', x_in: pd.DataFrame = None, y_in: pd.DataFrame 
     engine = db.create_engine(f'sqlite:///{cfg.DB_PATH}', echo=False)
     conn = engine.connect()
     if mode == 'append':
-        x_in.to_sql(name='features', con=conn,
-                    if_exists=mode, index=False)
-        y_in.to_sql(name='target', con=conn,
-                    if_exists=mode, index=False)
+        if x_in is not None:
+            x_in.to_sql(name='features', con=conn,
+                        if_exists=mode, index=False)
+        if y_in is not None:
+            y_in.to_sql(name='target', con=conn,
+                        if_exists=mode, index=False)
         return
     data = ingest_data()
     x, y = prepare_data(data)
@@ -92,6 +94,7 @@ def insert_rows(data_dict: Dict[str, pd.DataFrame]) -> str:
         db_data_span()
     elif dates_x_new:
         x_in = x_new[x_new['timestamp'].isin(dates_x_new)]
+        create_db(mode='append', x_in=x_in, y_in=None)
         dates_x_new = [pd.to_datetime(d, unit='s').strftime(
             format='%Y-%m') for d in dates_x_new]
         dates_y_new = [pd.to_datetime(d, unit='s').strftime(
@@ -102,6 +105,7 @@ def insert_rows(data_dict: Dict[str, pd.DataFrame]) -> str:
         db_data_span()
     elif dates_y_new:
         y_in = y_new[y_new['timestamp'].isin(dates_y_new)]
+        create_db(mode='append', x_in=None, y_in=y_in)
         dates_x_new = [pd.to_datetime(d, unit='s').strftime(
             format='%Y-%m') for d in dates_x_new]
         dates_y_new = [pd.to_datetime(d, unit='s').strftime(
