@@ -76,6 +76,17 @@ En esa dirección debería aparecer el sitio que soporta la API que se verá as�
 
 Probando en diferentes navegadores, en chrome puede ocurrir que localhost direccione al server (`nginx`) en vez de a la app, para solucionar esto hay que copiar la dirección exacta `http://localhost/` y no escribir solamente `localhost` en la barra de direcciones.
 
+## 4. Detener el contenedor
+Una vez que se termine de usar la app, el contenedor se puede detener (y todos su servicios asociados) con el comando:
+
+```
+docker compose down
+```
+
+<p align="center">
+    <img src="images/docker_stop.jpg" width="600"/>
+</p>
+
 # Cómo usar la web app
 ## Predicción - Inferencia
 Para generar predicciones basta con introducir el mes a predecir o bien un intervalo de meses (batch) en la caja de texto, con lo cual se ejecutará el modelo para esa(s) fecha(s) y se mostrarán los resultados en pantalla.
