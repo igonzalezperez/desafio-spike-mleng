@@ -36,6 +36,20 @@ docker compose up -d --build
 
 Al ejectuar el comando se comenzará a crear las imágenes y contenedor de docker, este proceso puede tomar algunos minutos ya que se deben instalar las librerías de python y luego se hace la optimización del modelo (grid search). Se debería ver el siguiente output:
 
+<p align="center">
+    <img src=".etc/pip_install.jpg" width="600"/>
+</p>
+
+<p align="center">
+    <img src=".etc/optimize.jpg" width="600"/>
+</p>
+
+<p align="center">
+    <img src=".etc/finish_docker.jpg" width="600"/>
+</p>
+
+En la última imagen se ve el proceso terminado, el cual tomó `113.9s` donde la mayor parte es la de optimización. Ese proceso guarda el modelo y pipelines necesarios para luego ser consultados por la API. Finalmente se monta el server local.
+
 Es posible hacer que la app sea escalable agregando el comando `--scale app=3` donde se generan 3 instancias del servicio (se puede poner un número arbitrario, el 3 es de ejemplo), así es posible manejar el tráfico y distribuirlo en las instancias de la app.
 
 ## 3. Navegar a la App
