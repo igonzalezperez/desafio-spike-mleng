@@ -74,7 +74,7 @@ En esa dirección debería aparecer el sitio que soporta la API que se verá as�
     <img src="images/api_landing.jpg" width="600"/>
 </p>
 
-Probando en diferentes navegadores, en chrome puede ocurrir que localhost direccione al server (`nginx`) en vez de a la app, para solucionar esto hay que copiar la dirección exacta `http://localhost/` y no escribir solamente `localhost` en la barra de direcciones.
+Probando en diferentes navegadores, en chrome puede ocurrir que localhost direccione al server (`nginx`) en vez de a la app, para solucionar esto hay que copiar la dirección exacta `http://localhost/` y no escribir solamente `localhost` en la barra de direcciones ni tampoco usar `hhtps` (notar la `s` al final).
 
 ## 4. Detener el contenedor
 Una vez que se termine de usar la app, el contenedor se puede detener (y todos su servicios asociados) con el comando:
