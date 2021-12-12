@@ -3,9 +3,9 @@
 Este proyecto contiente el código necesario para abordar el desafío para el puesto de Machine Learning Engineer en Spike. Para ello se desarrolló una Web App en Flask para predecir el precio de la leche en base a indicadores climatológicos, macroeconómicos y precios anteriores de la leche.
 
 # Cómo correr la Web App localmente
-Primero que todo es necesario tener instalado [`docker`](https://docs.docker.com/get-docker/) y [`docker compose`](https://docs.docker.com/compose/install/).
+Primero que todo es necesario tener instalado [`docker`](https://docs.docker.com/get-docker/) y [`docker compose`](https://docs.docker.com/compose/install/). Al instalar `docker` desktop se instala ``docker compose`` automáticamente.
 
-Para correr la API en un server va a ser necesario abrir la consola. En Windows esto se puede hacer con `Win + R` lo cual abrira una ventana en la que se debe escribir `cmd` y dar `Enter`. En otros sistemas operativos se puede abrir de manera similar.
+Para correr la API en un server va a ser necesario abrir la consola. En Windows esto se puede hacer con `Win + R` lo cual abrirá una ventana en la que se debe escribir `cmd` y dar `Enter`. En otros sistemas operativos se puede abrir de manera similar.
 
 <p align="center">
     <img src=".etc/open_cmd.jpg" width="300"/>
@@ -34,10 +34,12 @@ docker compose up -d --build
     <img src=".etc/docker_compose.jpg" width="600"/>
 </p>
 
-Con esto `docker` comenzará a crear las imágenes y el contenedor para disponibilizar la app. Esto podría tomar unos minutos ya que al iniciar se optimizan los parámetros del modelo de regresión y y estos se guardan para que luego la API pueda acceder a el.
+Al ejectuar el comando se comenzará a crear las imágenes y contenedor de docker, este proceso puede tomar algunos minutos ya que se deben instalar las librerías de python y luego se hace la optimización del modelo (grid search). Se debería ver el siguiente output:
+
+Es posible hacer que la app sea escalable agregando el comando `--scale app=3` donde se generan 3 instancias del servicio (se puede poner un número arbitrario, el 3 es de ejemplo), así es posible manejar el tráfico y distribuirlo en las instancias de la app.
 
 ## 3. Navegar a la App
-El comando anterior tomará unos segundos (~30s) en crear el contenedor, una vez terminado el proceso abrir un navegador e ir a la dirección: 
+Una vez terminado el paso anterior, abrir un navegador e ir a la dirección: 
 ```
 http://localhost/
 ```
