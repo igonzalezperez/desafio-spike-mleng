@@ -101,7 +101,7 @@ Para generar predicciones basta con introducir el mes a predecir o bien un inter
 
 Los meses se introducen en formato `YYYY-MM` y son separados por un espacio en caso de predicción por batch.
 
-La app muestra tanto los valores predecidos como los reales si es que estos ya existen en la base de datos (el modelo de datos se explica en la siguiente sección).
+La app muestra tanto los valores predichos como los reales si es que estos ya existen en la base de datos (el modelo de datos se explica en la siguiente sección).
 
 Si el input no es correcto, la app tirará un error y no se ejecutará nada. Otro caso de error ocurre cuando se busca predecir un mes para el cual no existe data suficiente para predecir, ya que para predecir el tiempo T + 1, se necesita data de T, T-1 y T-2. En cuyo caso se indicará qué meses faltan.
 
