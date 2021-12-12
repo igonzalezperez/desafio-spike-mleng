@@ -8,7 +8,7 @@ Primero que todo es necesario tener instalado [`docker`](https://docs.docker.com
 Para correr la API en un server va a ser necesario abrir la consola. En Windows esto se puede hacer con `Win + R` lo cual abrirá una ventana en la que se debe escribir `cmd` y dar `Enter`. En otros sistemas operativos se puede abrir de manera similar.
 
 <p align="center">
-    <img src=".etc/open_cmd.jpg" width="300"/>
+    <img src="images/open_cmd.jpg" width="300"/>
 </p>
 
 Esto abre la consola. Luego se deben seguir los siguientes pasos:
@@ -20,7 +20,7 @@ git clone https://github.com/igonzalezperez/desafio-spike-mleng.git
 ``` 
 
 <p align="center">
-    <img src=".etc/clone_repo.jpg" width="600"/>
+    <img src="images/clone_repo.jpg" width="600"/>
 </p>
 
 ## 2. Crear contenedor en Docker
@@ -31,26 +31,37 @@ docker compose up -d --build
 ```
 
 <p align="center">
-    <img src=".etc/docker_compose.jpg" width="600"/>
+    <img src="images/docker_compose.jpg" width="600"/>
 </p>
 
 Al ejectuar el comando se comenzará a crear las imágenes y contenedor de docker, este proceso puede tomar algunos minutos ya que se deben instalar las librerías de python y luego se hace la optimización del modelo (grid search). Se debería ver el siguiente output:
 
 <p align="center">
-    <img src=".etc/pip_install.jpg" width="600"/>
+    <img src="images/pip_install.jpg" width="600"/>
 </p>
 
 <p align="center">
-    <img src=".etc/optimize.jpg" width="600"/>
+    <img src="images/optimize.jpg" width="600"/>
 </p>
 
 <p align="center">
-    <img src=".etc/finish_docker.jpg" width="600"/>
+    <img src="images/finish_docker.jpg" width="600"/>
 </p>
 
-En la última imagen se ve el proceso terminado, el cual tomó `113.9s` donde la mayor parte es la de optimización. Ese proceso guarda el modelo y pipelines necesarios para luego ser consultados por la API. Finalmente se monta el server local.
+En la última imagen se ve el proceso terminado, el cual tomó `113.9s` donde la mayor parte es la de optimización. Ese proceso guarda el modelo y pipelines necesarios para luego ser consultados por la API. Finalmente se monta el server local. Cabe mencionar que la instalación de librerías y optimización solo se ejecuta al crear las imágenes, al detener y volver a usar el contenedor solo hay que esperar a que se inicialice el servidor.
 
-Es posible hacer que la app sea escalable agregando el comando `--scale app=3` donde se generan 3 instancias del servicio (se puede poner un número arbitrario, el 3 es de ejemplo), así es posible manejar el tráfico y distribuirlo en las instancias de la app.
+También se puede checkear que el proceso finalizó correctamente en la aplicación de `Docker Desktop`, donde deberían verse los servicios activos como en la imagen siguiente:
+
+<p align="center">
+    <img src="images/docker_desktop.jpg" width="600"/>
+</p>
+
+
+Es posible hacer que la app sea escalable agregando el comando `--scale app=3` donde se generan 3 instancias del servicio (se puede poner un número arbitrario, el 3 es de ejemplo), así es posible manejar el tráfico y distribuirlo en las instancias de la app. En ese caso, al ver `Docker Desktop` aparecerán todas esas instancias.
+
+<p align="center">
+    <img src="images/docker_scale.jpg" width="600"/>
+</p>
 
 ## 3. Navegar a la App
 Una vez terminado el paso anterior, abrir un navegador e ir a la dirección: 
@@ -60,19 +71,21 @@ http://localhost/
 En esa dirección debería aparecer el sitio que soporta la API que se verá así:
 
 <p align="center">
-    <img src=".etc/api_landing.jpg" width="600"/>
+    <img src="images/api_landing.jpg" width="600"/>
 </p>
+
+Probando en diferentes navegadores, en chrome puede ocurrir que localhost direccione al server (`nginx`) en vez de a la app, para solucionar esto hay que copiar la dirección exacta `http://localhost/` y no escribir solamente `localhost` en la barra de direcciones.
 
 # Cómo usar la web app
 ## Predicción - Inferencia
 Para generar predicciones basta con introducir el mes a predecir o bien un intervalo de meses (batch) en la caja de texto, con lo cual se ejecutará el modelo para esa(s) fecha(s) y se mostrarán los resultados en pantalla.
 
 <p align="center">
-    <img src=".etc/pred_1.jpg" width="500"/>
+    <img src="images/pred_1.jpg" width="400"/>
 </p>
 
 <p align="center">
-    <img src=".etc/pred_2.jpg" width="500"/>
+    <img src="images/pred_2.jpg" width="400"/>
 </p>
 
 Los meses se introducen en formato `YYYY-MM` y son separados por un espacio en caso de predicción por batch.
@@ -82,7 +95,7 @@ La app muestra tanto los valores predecidos como los reales si es que estos ya e
 Si el input no es correcto, la app tirará un error y no se ejecutará nada. Otro caso de error ocurre cuando se busca predecir un mes para el cual no existe data suficiente para predecir, ya que para predecir el tiempo T + 1, se necesita data de T, T-1 y T-2. En cuyo caso se indicará qué meses faltan.
 
 <p align="center">
-    <img src=".etc/pred_3.jpg" width="500"/>
+    <img src="images/pred_3.jpg" width="400"/>
 </p>
 
 ## Base de datos
@@ -95,17 +108,17 @@ En la carpeta `/app/data/csv/`, además de los datos originales hay otros 3 arch
 Esta revisa que los archivos tengan el formato correcto y luego inserta las filas si es que estas no se encuentran en la BBDD. Luego, la app informa qupe columnas fueron insertadas tanto en las features (precipitación + banco central) como targets (precio de la leche).
 
 <p align="center">
-    <img src=".etc/dummy.jpg" width="500"/>
+    <img src="images/dummy.jpg" width="400"/>
 </p>
 
 <p align="center">
-    <img src=".etc/insert_data.jpg" width="500"/>
+    <img src="images/insert_data.jpg" width="400"/>
 </p>
 
 Como se ve en el ejemplo, ahora se cuenta con datos para poder predecir el mes `2020-06` que antes no se podía.
 
 <p align="center">
-    <img src=".etc/pred_new.jpg" width="500"/>
+    <img src="images/pred_new.jpg" width="400"/>
 </p>
 
 Adicionalmente, la base de datos se puede resetear al hacer click en la parte superior en donde aparece `Reset DB`. Esto recrea la BBDD original.
@@ -116,7 +129,7 @@ En la parte superior derecha de la app se encuentran los logs que permiten monit
 Información de grid search y entrenamiento. Se genera al crear el contenedor y no es modificado por el uso de la API. El output debería ser el siguiente:
 
 <p align="center">
-    <img src=".etc/trainlog.jpg" width="500"/>
+    <img src="images/trainlog.jpg" width="400"/>
 </p>
 
 Se ven los parámetros de optimización así como los resultados de entrenamiento. También está la opción de descargarlo como archivo de texto.
@@ -125,7 +138,7 @@ Se ven los parámetros de optimización así como los resultados de entrenamient
 El log de predicción va guardando todas las interacciones con la app en sí. Predicciones, inputs incorrectos, data insuficiente, update de la BBDD, etc y debería verse algo como esto:
 
 <p align="center">
-    <img src=".etc/predlog.jpg" width="500"/>
+    <img src="images/predlog.jpg" width="400"/>
 </p>
 
 Es importante mencionar que cuando se inserta data a la BBDD, automáticamente se vuelve a predecir con los nuevos datos para recalcular el RMSE y R2, y así poder identificar si el desempeño mejora o empeora en el tiempo, pudiendo detectar fenómenos como data drifting. Al igual que el caso anterior, es posible descargar los logs como archivos de texto.
