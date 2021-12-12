@@ -103,9 +103,9 @@ El contenedor genera una base de datos con los archivos que se entregaron para e
 
 Para poder hacer más predicciones futuras es posible cargar nuevos datos, se espera que estos tengan la misma estructura que los originales de precipitación, banco central y precio. En particular se requiere que tengan todas las columnas necesarias para la predicción y que no contengan Nans.
 
-En la carpeta `/app/data/csv/`, además de los datos originales hay otros 3 archivos con el sufijo `_dummy`, los cuales se pueden utilizar para testear la funcionalidad de carga de datos.
+Se revisa que los archivos tengan el formato correcto y luego se insertan las filas si es que estas no se encuentran en la BBDD. Luego, la app informa qupe columnas fueron insertadas tanto en las features (precipitación + banco central) como targets (precio de la leche).
 
-Esta revisa que los archivos tengan el formato correcto y luego inserta las filas si es que estas no se encuentran en la BBDD. Luego, la app informa qupe columnas fueron insertadas tanto en las features (precipitación + banco central) como targets (precio de la leche).
+En la carpeta `/app/data/csv/`, además de los datos originales hay otros 3 archivos con el sufijo `_dummy`, los cuales se pueden utilizar para testear la funcionalidad de carga de datos, estos datos contienen data para completar hasta el mes 2021-03, por lo que se podrá predecir hasta 2021-04 luego de insertar los datos. La data dentro de los archivos es ficticia (filas repetidas de un mes anterior) así que las predicciones no son confiables pero el punto es probar la funcionalidad.
 
 <p align="center">
     <img src="images/dummy.jpg" width="400"/>
@@ -115,7 +115,7 @@ Esta revisa que los archivos tengan el formato correcto y luego inserta las fila
     <img src="images/insert_data.jpg" width="400"/>
 </p>
 
-Como se ve en el ejemplo, ahora se cuenta con datos para poder predecir el mes `2020-06` que antes no se podía.
+Como se ve en el ejemplo, ahora se cuenta con datos para poder predecir los meses `2020-06` a `2021-04` que antes no se podía. La última predicción muestra `nan` en el precio real ya que es un valor que no existe en la BBDD.
 
 <p align="center">
     <img src="images/pred_new.jpg" width="400"/>
