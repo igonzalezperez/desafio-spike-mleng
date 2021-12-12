@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<body>
+    <h2>Meses en la base de datos</h2>
+    <div class="col-md-2">
+        <table>
+            {% for value in db_span['db_span'] %}
+            <tr>
+                <td> {{ value }} </td>
+            </tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+{% endblock content %}

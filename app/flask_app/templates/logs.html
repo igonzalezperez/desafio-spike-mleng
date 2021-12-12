@@ -14,11 +14,7 @@
 
 </head>
 
-{% if title %}
 <title>Spike ML API - {{ title }}</title>
-{% else %}
-<title>Spike ML API</title>
-{% endif %}
 </head>
 
 <body>
@@ -47,50 +43,18 @@
     </header>
     <main role="main" class="container">
         <div class="row">
-            <div class="col-md-6">
-                {% with messages = get_flashed_messages(with_categories=true) %}
-                {% if messages %}
-                {% for category, message in messages %}
-                <div class="alert alert-{{ category }}">
-                    {{ message }}
-                </div>
-                {% endfor %}
-                {% endif %}
-                {% endwith %}
-                {% block content %}{% endblock %}
+            <div class="col-md-12">
+
+                <body>
+                    <h2>Logs de {{ title }}</h2>
+                    <form method="POST" action="{{ url_for('get_logs', log_name=fn)}}" enctype="multipart/form-data">
+                        <button type="submit" class="btn btn-primary btn-large">Descargar Logs</button>
+                    </form>
+                    {% for row in logs %}
+                    {{ row }} <br>
+                    {% endfor %}
+                </body>
             </div>
-            {% if not logs %}
-            <div class="col-md-6">
-                <div class="content-section">
-                    <h3>¿Cómo usar la API?</h3>
-                    <ul class="list-unstyled">
-                        <li><b>Carga de datos</b></li>
-                        <ul>
-                            <li>La API accede a una base de datos que se puede actualizar agregando más filas de datos.
-                            </li>
-                            <li>Se pueden insertar datos subiendo archivos .csv con las variables climatológicas,
-                                macroecónomicas y el precio de la leche mensual.</li>
-                            <li>Al insertar datos se chequea que estos no existan en la base de datos, si no existen se
-                                insertan, de lo contrario no se hace nada.</li>
-                        </ul>
-                        <li><b>Predicción</b></li>
-                        <ul>
-                            <li>Un mes - Se ingresa el mes a predecir: '2020-01' (sin las comillas).
-                            </li>
-                            <li>Batch - Se ingresa mes de inicio y final separados por un espacio: '2020-01 2020-04'
-                                (sin las comillas). Predice todos los meses intermedios, incluyendo los bordes.
-                            </li>
-                            <li> Para predecir una fecha, la base de datos requiere los datos de 3 meses previos.</li>
-                        </ul>
-                    </ul>
-                    {% if container_id %}
-                    <div class='footer'>
-                        Container ID: {{ container_id["container_id"]}}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
         </div>
     </main>
 

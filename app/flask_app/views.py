@@ -2,32 +2,36 @@
 Flask app for loading data, make batch predictions and monitoring.
 """
 # %% Imports
+import os
+import json
 from typing import List
 import pandas as pd
 from loguru import logger
-from flask import Flask, request, render_template, flash
+from flask import Flask, request, render_template, flash, send_from_directory, abort
 from dateutil.relativedelta import relativedelta as rdelta
 import secrets
 import socket
 
 from werkzeug.utils import redirect
+from database.database import db_data_span
+from database.database import create_db
 from data_science.predict import make_predictions
 from database.database import insert_rows
-from config import REQUIRED_COLUMNS
+import config.config as cfg
 
 # %% Config
 app = Flask(__name__)
 secret = secrets.token_urlsafe(32)
 app.secret_key = secret
-
+app.config["LOGS"] = os.path.join(os.getcwd(), 'logs')
 
 # %% Functions and Classes
+
 
 def parse_dates(dates: str) -> List[pd.Timestamp]:
     """
     Parse dates recieved from /predict POST request. Behavior depends on the input:
     'YYYY-MM': Single date specifying year and month, separated by dash.
-    'YYYY-MM,YYYY-MM,...': Same format as before but with multiple dates separated by a comma. In this cases each date is returned as datetime.
     'YYYY-MM YYYY-MM': Dates separated by a space. A list of all the datetimes for months between first and second date, including the borders. 
     If input doesn't conform with any of these formats return None.
 
@@ -59,24 +63,24 @@ def files_to_dict(files):
     for f in files:
         df = pd.read_csv(f)
         if 'date' in df.columns:
-            if set(REQUIRED_COLUMNS['rain']).issubset(df.columns) and df[REQUIRED_COLUMNS['rain']].isna().sum().sum() == 0:
+            if set(cfg.REQUIRED_COLUMNS['rain']).issubset(df.columns) and df[cfg.REQUIRED_COLUMNS['rain']].isna().sum().sum() == 0:
                 data_dict['rain'] = df
             else:
                 logger.error('Missing required columns.')
                 return None, 'Faltan datos en las columnas requeridas'
         elif 'Periodo' in df.columns:
-            if set(REQUIRED_COLUMNS['central_bank']).issubset(df.columns) and df[REQUIRED_COLUMNS['central_bank']].isna().sum().sum() == 0:
+            if set(cfg.REQUIRED_COLUMNS['central_bank']).issubset(df.columns) and df[cfg.REQUIRED_COLUMNS['central_bank']].isna().sum().sum() == 0:
                 data_dict['central_bank'] = df
             else:
                 logger.error('Missing required columns.')
                 return None, 'Faltan datos en las columnas requeridas'
         elif ('Anio' in df.columns) and ('Mes' in df.columns):
-            if set(REQUIRED_COLUMNS['milk_price']).issubset(df.columns) and df[REQUIRED_COLUMNS['milk_price']].isna().sum().sum() == 0:
+            if set(cfg.REQUIRED_COLUMNS['milk_price']).issubset(df.columns) and df[cfg.REQUIRED_COLUMNS['milk_price']].isna().sum().sum() == 0:
                 data_dict['milk_price'] = df
             else:
                 logger.error('Missing required columns')
                 return None, 'Faltan datos en las columnas requeridas'
-    if set(REQUIRED_COLUMNS.keys()) != set(data_dict.keys()):
+    if set(cfg.REQUIRED_COLUMNS.keys()) != set(data_dict.keys()):
         logger.error('Missing required data source.')
         return None, 'Faltan fuentes de datos requeridas.'
     return data_dict, None
@@ -102,6 +106,7 @@ def insert_data():
                 msg = insert_rows(dd)
                 flash(*msg['x'])
                 flash(*msg['y'])
+                make_predictions(pred_dates=None)
             else:
                 flash(msg, 'danger')
         return redirect('/')
@@ -127,6 +132,40 @@ def predict():
                                table_name="Prices", zip=zip)
 
 
-@app.route('/monitor')
-def monitor():
+@app.route('/db_info')
+def db_info():
+    with open(os.path.join('logs', 'db_span.json'), 'r') as f:
+        db_span = json.load(f)
+    return render_template('db_info.html', db_span=db_span)
+
+
+@app.route('/logs/train')
+def train_logs():
+    with open(os.path.join('logs', 'train.log'), 'r') as f:
+        logs = f.readlines()
+    return render_template('logs.html', logs=logs, title='Entrenamiento', fn='train.log')
+
+
+@app.route('/logs/pred')
+def pred_logs():
+    with open(os.path.join('logs', 'predict.log'), 'r') as f:
+        logs = f.readlines()
+    return render_template('logs.html', logs=logs, title='Predicción', fn='predict.log')
+
+
+@app.route('/reset-db')
+def reset_db():
+    logger.warning('Reset DB.')
+    create_db(mode='replace')
+    db_data_span()
+    flash('La base de datos fue reseteada.', 'warning')
     return redirect('/')
+
+
+@app.route('/get-logs/<log_name>', methods=['POST'])
+def get_logs(log_name):
+    if request.method == 'POST':
+        try:
+            return send_from_directory(app.config['LOGS'], log_name, as_attachment=True)
+        except FileNotFoundError:
+            abort(404)

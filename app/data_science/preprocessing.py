@@ -60,9 +60,10 @@ def ingest_data() -> Dict[str, pd.DataFrame]:
     Returns:
         Dict[str, pd.DataFrame]: Dictionary with one key-value pair per file storing data as DataFrame.
     """
-    rain = pd.read_csv(os.path.join('data', 'precipitaciones.csv'))
-    central_bank = pd.read_csv(os.path.join('data', 'banco_central.csv'))
-    milk_price = pd.read_csv(os.path.join('data', 'precio_leche.csv'))
+    rain = pd.read_csv(os.path.join('data', 'csv', 'precipitaciones.csv'))
+    central_bank = pd.read_csv(os.path.join(
+        'data', 'csv', 'banco_central.csv'))
+    milk_price = pd.read_csv(os.path.join('data', 'csv', 'precio_leche.csv'))
     return {'rain': rain, 'central_bank': central_bank, 'milk_price': milk_price}
 
 
@@ -185,5 +186,3 @@ def moving_avg_transform(data: pd.DataFrame, mode: str = 'train') -> Tuple[pd.Da
     x = data[[x for x in data.columns if x != 'Precio_leche']]
     y = data['Precio_leche']
     return x, y
-
-# %%

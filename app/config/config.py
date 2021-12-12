@@ -2,26 +2,19 @@ import os
 
 from dotenv import load_dotenv
 
-from data_science.utils.logger_config import logger_config
+from .logger_config import logger_config
 
 load_dotenv()
-logger_config(level=os.environ["LOG_LEVEL"])
+logger_config(filepath=os.path.join('logs', 'predict.log'),
+              level=os.environ["LOG_LEVEL"])
 
-MODEL_DIR = os.environ["MODEL_DIR"]
-PIPELINE_DIR = os.environ["PIPELINE_DIR"]
-PARAM_DIR = os.environ["PARAM_DIR"]
-
-BEST_PARAMS_FILE = os.environ["BEST_PARAMS_FILE"]
-FEATURE_PIPELINE_FILE = os.environ["FEATURE_PIPELINE_FILE"]
-TARGET_PIPELINE_FILE = os.environ["TARGET_PIPELINE_FILE"]
-MODEL_FILE = os.environ["MODEL_FILE"]
-
-BEST_PARAMS_PATH = os.path.join(MODEL_DIR, PARAM_DIR, BEST_PARAMS_FILE)
+DB_PATH = os.path.join(*os.environ["DB_PATH"].split('/'))
+BEST_PARAMS_PATH = os.path.join(*os.environ["BEST_PARAMS_PATH"].split('/'))
 FEATURE_PIPELINE_PATH = os.path.join(
-    MODEL_DIR, PIPELINE_DIR, FEATURE_PIPELINE_FILE)
+    *os.environ["FEATURE_PIPELINE_PATH"].split('/'))
 TARGET_PIPELINE_PATH = os.path.join(
-    MODEL_DIR, PIPELINE_DIR, TARGET_PIPELINE_FILE)
-MODEL_PATH = os.path.join(MODEL_DIR, MODEL_FILE)
+    *os.environ["TARGET_PIPELINE_PATH"].split('/'))
+MODEL_PATH = os.path.join(*os.environ["MODEL_PATH"].split('/'))
 
 REQUIRED_COLUMNS = {'rain': ['date', 'Coquimbo', 'Valparaiso', 'Metropolitana_de_Santiago',
                              'Libertador_Gral__Bernardo_O_Higgins', 'Maule', 'Biobio', 'La_Araucania',	'Los_Rios',
@@ -32,3 +25,6 @@ REQUIRED_COLUMNS = {'rain': ['date', 'Coquimbo', 'Valparaiso', 'Metropolitana_de
                     'milk_price': ['Anio', 'Mes',	'Precio_leche',
                                    ]
                     }
+os.makedirs(os.path.join('models', 'pipelines'), exist_ok=True)
+os.makedirs(os.path.join('models', 'params'), exist_ok=True)
+os.makedirs(os.path.join('data', 'sql'), exist_ok=True)

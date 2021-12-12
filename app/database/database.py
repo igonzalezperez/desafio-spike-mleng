@@ -1,5 +1,6 @@
 import os
 from typing import Tuple, Dict
+import json
 
 import pandas as pd
 from loguru import logger
@@ -8,9 +9,7 @@ import sqlalchemy as db
 from data_science.preprocessing import ingest_data
 from data_science.preprocessing import prepare_data
 
-DB_FILE = os.environ["DB_FILE"]
-DB_FOLDER = os.environ["DB_FOLDER"]
-DB_PATH = os.path.join(DB_FOLDER, DB_FILE)
+import config.config as cfg
 
 
 def create_db(mode: str = 'fail', x_in: pd.DataFrame = None, y_in: pd.DataFrame = None) -> None:
@@ -22,7 +21,7 @@ def create_db(mode: str = 'fail', x_in: pd.DataFrame = None, y_in: pd.DataFrame 
         x_in (pd.DataFrame, optional): Feature data to be inserted if mode is set to 'append'. Defaults to None.
         y_in (pd.DataFrame, optional): Target data to be inserted if mode is set to 'append'. Defaults to None.
     """
-    engine = db.create_engine(f'sqlite:///{DB_PATH}', echo=False)
+    engine = db.create_engine(f'sqlite:///{cfg.DB_PATH}', echo=False)
     conn = engine.connect()
     if mode == 'append':
         x_in.to_sql(name='features', con=conn,
@@ -52,7 +51,7 @@ def get_db_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame]: Data for features and target from de database as DataFrames.
     """
-    engine = db.create_engine(f'sqlite:///{DB_PATH}', echo=False)
+    engine = db.create_engine(f'sqlite:///{cfg.DB_PATH}', echo=False)
     conn = engine.connect()
     x = pd.read_sql_table('features', conn)
     y = pd.read_sql_table('target', conn)
@@ -64,10 +63,8 @@ def get_db_data() -> Tuple[pd.DataFrame, pd.DataFrame]:
 def insert_rows(data_dict: Dict[str, pd.DataFrame]) -> str:
     """
     Insert new rows to database if they don't existe already.
-
     Args:
         data_dict (Dict[str, pd.Dataframe]): Dictionary with key-value pairs for each data source.
-
     Returns:
         str: Message describing if data was inserted or not.
     """
@@ -86,10 +83,13 @@ def insert_rows(data_dict: Dict[str, pd.DataFrame]) -> str:
             format='%Y-%m') for d in dates_x_new]
         dates_y_new = [pd.to_datetime(d, unit='s').strftime(
             format='%Y-%m') for d in dates_y_new]
-        logger.info(f'Added feature records for months {dates_x_new}.')
-        logger.info(f'Added target records for months {dates_y_new}.')
-        msg = {'x': (f'Los datos de features se insertaron exitosamente para los meses {dates_x_new}.', 'success'),
-               'y': (f'Los datos de target se insertaron exitosamente para los meses {dates_y_new}.', 'success')}
+        logger.info(
+            f'Added feature records for months {", ".join(dates_x_new)}.')
+        logger.info(
+            f'Added target records for months {", ".join(dates_y_new)}.')
+        msg = {'x': (f'Los datos de features se insertaron exitosamente para los meses {", ".join(dates_x_new)}.', 'success'),
+               'y': (f'Los datos de target se insertaron exitosamente para los meses {", ".join(dates_y_new)}.', 'success')}
+        db_data_span()
     elif dates_x_new:
         x_in = x_new[x_new['timestamp'].isin(dates_x_new)]
         dates_x_new = [pd.to_datetime(d, unit='s').strftime(
@@ -97,8 +97,9 @@ def insert_rows(data_dict: Dict[str, pd.DataFrame]) -> str:
         dates_y_new = [pd.to_datetime(d, unit='s').strftime(
             format='%Y-%m') for d in dates_y_new]
         logger.info('Uplodaded feature records already exist in database.')
-        msg = {'x': (f'Los datos de features se insertaron exitosamente para los meses {dates_x_new}.', 'success'),
+        msg = {'x': (f'Los datos de features se insertaron exitosamente para los meses {", ".join(dates_x_new)}.', 'success'),
                'y': ('Los datos de target a insertar ya existen en la base de datos.', 'info')}
+        db_data_span()
     elif dates_y_new:
         y_in = y_new[y_new['timestamp'].isin(dates_y_new)]
         dates_x_new = [pd.to_datetime(d, unit='s').strftime(
@@ -107,9 +108,25 @@ def insert_rows(data_dict: Dict[str, pd.DataFrame]) -> str:
             format='%Y-%m') for d in dates_y_new]
         logger.info('Uplodaded target records already exist in database.')
         msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'info'),
-               'y': (f'Los datos de target se insertaron exitosamente para los meses {dates_y_new}.', 'success')}
+               'y': (f'Los datos de target se insertaron exitosamente para los meses {", ".join(dates_y_new)}.', 'success')}
+        db_data_span()
     else:
         logger.info('Uplodaded records already exist in database.')
         msg = {'x': ('Los datos de features a insertar ya existen en la base de datos.', 'info'),
                'y': ('Los datos de target a insertar ya existen en la base de datos.', 'info')}
     return msg
+
+
+def db_data_span() -> None:
+    """
+    Save all dates that are stored in the database as json file.
+    """
+    x, y = get_db_data()
+    data = x.merge(y, how='inner', on='timestamp')
+    data['timestamp'] = pd.to_datetime(data['timestamp'], unit='s')
+    data = {'db_span': list(data.timestamp.apply(
+        lambda x: f'{x.year}-{x.month:02d}'))}
+    with open(os.path.join('logs', 'db_span.json'), 'w') as f:
+        json.dump(data, f)
+    logger.info(
+        f"Updated DB available dates at {os.path.join('logs', 'db_span.json')}.")
