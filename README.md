@@ -13,7 +13,7 @@ Para correr la API en un server va a ser necesario abrir la consola. En Windows 
 
 Esto abre la consola. Luego se deben seguir los siguientes pasos:
 ## 1. Clonar repositorio
-El proyecto se puede descargar directamente como un .zip y descomprimirlo localmente. Alterenativamente Si se tiene `git` instalado, se puede clonar usando la consola:
+El proyecto se puede descargar directamente como un .zip y descomprimirlo localmente. Alterenativamente, si se tiene `git` instalado, se puede clonar usando la consola:
 
 ```
 git clone https://github.com/igonzalezperez/desafio-spike-mleng.git
@@ -149,15 +149,17 @@ En esta sección detallaré cómo aborde el problema a un nivel técnico, las de
 ## Tech stack
 - **Backend**:
   - ``sqlite``: Para la base de datos, se utiliza porque es sencillo y rápido de usar para un proyecto pequeño. Para un proyecto que vaya a ser implementado debería migrarse a otra opción como ``PostgreSQL``, ``MySQL`` o ``MongoDB``.
-  - ``python``: Se refactoriza el notebook original a archivos de `python` comunes.
+  - ``python``: Se refactoriza el notebook original a archivos de `python` comunes separando preprocesamiento, entrenamiento/grid search y predicción.
 - **API**:
   - ``Flask``: Se utiliza por su facilidad y porque ya tengo experiencia con este framework. También podrían considerarse Django o FastAPI.
 - **Frontend**:
   - html/css + bootstrap: Utilicé templates para generar un front-end agradable a la vista.
-  
+- **Deploy**:
+  - Docker: Se utiliza ya que es la forma más común de disponibilizar microsevicios, es open-source y tiene un soporte bastente amplio.
+  - Se utiliza una imágen de `nginx` para usar como web server/load balancer para poder escalar el proyecto.
 ## Modelo de datos
 ### Fuente de datos
-Se tienen 3 fuentes de datos de archivos `.csv` los cuales primero se preprocesan para limpiar los datos.
+Se tienen 3 fuentes de datos de archivos `.csv` los cuales primero se preprocesan para limpiar los datos. Las transformaciones aplicadas son las que definió el data scientist que creó el modelo originalmente.
 #### `precipitaciones.csv`
 - Datos de precipitación en las regiones de Chile: 
   - 9 columnas: Fecha (str) y 8 regiones de Chile (float).
@@ -166,7 +168,7 @@ Se tienen 3 fuentes de datos de archivos `.csv` los cuales primero se preprocesa
   - Convertir columna 'date' (timestamp-str) a unix timestamp (float). Renombrar a 'timestamp'.
 #### `banco_central.csv`
 - 85 columnas: 
-  - Periodo (str): Timestamp mensual.
+  - Periodo (str): Timestamp mensual (e.g. '2020-05-01 00:00:00 UTC').
   - 9 Columnas Imacec (str).
   - 28 Columnas PIB (str).
   - 1 Columna Indice de ventas comercio real no durables IVCM (str).
@@ -187,19 +189,20 @@ Se tienen 3 fuentes de datos de archivos `.csv` los cuales primero se preprocesa
 - 506 filas: Data mensual desde 1979-01 a 2021-02. 0 Nans, 0 duplicados.
 - Preprocesamiento:
   - Combinar columnas 'Anio'(float) y 'Mes'(str) a unix timestamp (float). Nombrar nueva columna 'timestamp' y eliminar las otras dos.
+    - El código original utilizaba la librería locale para convertir los meses en español a número pero eso me arrojaba un error (probablemente un problema de OS). Por lo que la cambié por `dateparser` que tiene la misma funcionalidad y no tira error.
   
 ### Base de datos
 Una vez limpiados los datos estos se ingresan a una base de datos de `sqlite3`. En específico se divide el input del output.
 - Tabla `features`: Inner join entre data de precipitación y banco central.
 - Tabla `target`: Data del precio de la leche.
 
-De este modo, la data puede ser consumida por algún modelo o continuar siendo procesada accediendo a la BBDD mediante queries. También es posible extender la cantidad de datos y dejar de depender de los `.csv`.
+De este modo, la data puede ser consumida por algún modelo o continuar siendo procesada accediendo a la BBDD mediante queries. También se hace posible extender la cantidad de datos y dejar de depender de los `.csv`.
 
 ## Modelo de ML
 ### Procesamiento
-Primero se hace un inner join entre la tabla `features` y `targets`, para que coincidan las fechas a predecir.
+Primero se hace un inner join entre la tabla `features` y `targets`, para que coincidan las fechas a predecir. Ya que puede ocurrir que hayan ciertas fechas que existan en una tabla pero que no estén en la otra, que es el caso, hay más filas de targets que de features.
 
-Luego, para generar el dataset que luego se usará para entrenar modelos, se realiza un procesamiento extra que toma en cuenta datos anteriores para predecir el siguiente, ya que el problema se plantea como una regresión.
+Luego, para generar el dataset que se usará para entrenar modelos, se realiza un procesamiento extra que toma en cuenta datos anteriores para predecir el siguiente, ya que el problema se plantea como una regres/forecasting.
 
 En particular se calculan los promedios y desviaciones estándar de cada columna para los últimos 3 meses como medias móviles, incluyéndo el precio de la leche, por lo que si el precio de la leche en un tiempo `t` es `Y[t]` y las features son `X[t]`, la predicción se realiza mediante:
 
@@ -211,6 +214,9 @@ Y[t+1] = Modelo(X[t, t-1, t-2],
                 mean(Y[t, t-1, t-2]),
                 std(Y[t, t-1, t-2]),)
 ```
+
+Dado que se trata de un problema de `forecasting` hace sentido utilizar la variable del precio de la leche para tiempos anteriores, ya que es probablemente la variable que mejor va a reflejar valores futuros.
+
 ### Optimización
 Luego del procesamiento se utiliza grid search para optimizar los parámetros del siguiente Pipeline:
 
@@ -232,11 +238,13 @@ En la práctica se tienen dos pipelines, uno con todos los transformadores/selec
 El modelo y pipelines óptimos se guardan como archivos `.pkl` para luego ser utilizados en la API. Los procesos de limpieza y preprocesamiento (medias móviles) de secciones anteriores no necesitan guardarse ya que no tienen un método `.fit()`, solo transforman.
 
 ## API
-La API se desarrolla usando `Flask`. Dado que el problema de regresión requiere de datos anteriores para poder predecir, el input para una sola predicción deberían ser 3 filas correspondientes a los meses inmediatamente anteriores al mes de la predicción. Sin embargo consideré que esto podía resultar engorroso, es por eso que separé la parte de carga de datos de la de predicción. Para predecir basta con escribir una fecha, mientras que la base de datos podría mantenerse periódicamente, sin que el usuario se preocupe de si el input es correcto o no.
+La API se desarrolla usando `Flask`. Dado que el problema de regresión/forecasting requiere de datos anteriores para poder predecir, el input para una sola predicción deberían ser 3 filas correspondientes a los meses inmediatamente anteriores al mes de la predicción. Sin embargo consideré que esto podía resultar engorroso, es por eso que separé la parte de carga de datos de la de predicción. Para predecir basta con escribir una fecha, mientras que la base de datos podría mantenerse periódicamente, sin que el usuario se preocupe de si el input es correcto o no.
 
 ### **/endpoints**
 - **/predict**:
   - Recibe un string con las fechas a predecir. Puede ser una predicción o por batches. El formato es `YYYY-MM`. Dos fechas separadas por un espacio se procesan como batch incluyendo todos los meses intermedios.
+  - Busca en la BBDD si es que existe la data necesaria para hacer la predicción, si es que no entrega un mensaje de error.
+  - Lee los archivos de pipeline y modelo previamente entrenados para aplicar las transformaciones y luego la predicción.
   - Retorna un dataframe con las fechas, predicciones y valores reales si es que existen.
 - **/insert_data**:
   - Recibe los archivos `.csv` para ser insertados en la BBDD. Se espera que sean 3 archivos con el mismo fromato que la fuente de datos original del desafío.
@@ -252,7 +260,7 @@ La API se desarrolla usando `Flask`. Dado que el problema de regresión requiere
 - **/logs/pred**:
   - Muestra los logs de predicción.
 - **/get-logs/<log_name>**:
-  - Descarga el archivo de log `<log_name>` (e.g. `/get-logs/train.log`).
+  - Descarga el archivo de log `<log_name>` como archivo de texto (e.g. `/get-logs/train.log`).
 
 ## Contenedores
 La aplicación se encapsula en imágenes/contenedores usando Docker. Para que la app sea escalable se genera una imagen de la app en sí, y otra con `nginx` que funciona como web server y puede ser utilizado como load balancer para escalar la app y manejar el tráfico en ella. En la sección se cómo correr el server mostré que el contenedor se puede montar con
@@ -267,15 +275,16 @@ para poder escalar bastaría con agregar
 docker compose up -d --build --scale app=5
 ```
 
-donde el último parámetro índica cuántas copias de la app se disponibilizarán y `nginx` luego se encarga de distribuir el tráfico.
+donde el último parámetro índica cuántas copias de la app se disponibilizarán y `nginx` luego se encarga de distribuir el tráfico. En la parte inferior derecha de la app aparece el `Container ID` (e.g. `Container ID: ec338db6d612`) que muestra cual copia del servicio es, cuando se usa más de una copia ese ID va cambiando al recargar la página, i.e., se distribuye la carga.
 
 La imágen de la app tiene acoplada la parte de entrenamiento y de la API, el entrenamiento se hace antes de disponibilizar el server y crea los archivos necesarios para que luego la app pueda predecir y acceder a la BBDD.
 
 ## Cosas que habría hecho en un proyecto más grande.
 - Utilizar otro soporte para la base de datos como PostgreSQL o MySQL.
-- Generar más imágenes que dependan entre sí, separando `nginx`, `API`, Optimización/Entrenamiento. En vez de tener solo dos imágenes (`nginx` y el resto).
-- Generar una nueva imágen para la Base de Datos para generar persistencia de datos, como está ahora la data se resetea al detener el contenedor.
+- Generar más imágenes que dependan entre sí, separando `nginx`, API/Frontend y Optimización/Entrenamiento. En vez de tener solo dos imágenes (`nginx` y toda la app).
+- Generar una nueva imágen para la Base de Datos para generar persistencia de datos usando Docker `volumes`, como está ahora la data se resetea al detener el contenedor.
 - Autenticación y seguridad en general, en específico para la base de datos.
 - Tests unitarios para las funciones/clases en `python`.
 - Explorar más los datos para definir rangos aceptables. Ya que el usuario puede ingresar datos, no sería bueno si los datos ingresados están alterados, ya que solo se chequea que las columnas existan y no sean Nan. Podría incluirse otra tabla con stats de cada columna para ver si nuevos datos son anómalos.
 - Utilizar los logs para un reentrenamiento rutinario en base al drift en los datos.
+- Dado que los datos utilizados son públicos y se pueden encontrar en internet, podría ser viable usar web scraping para obtener los datos mensualmente sin necesidad de cargar datos, así siempre se podría predecir el siguiente mes sin interacción del usuario.
